@@ -9,6 +9,8 @@ def on_enter():
         with open("user_input.txt", "w") as file:
             file.write(user_input + "\n") 
         messagebox.showinfo("Success", f"The word '{user_input}' has been saved to the file.")
+
+        entry.delete(0, tk.END)
     else:
         messagebox.showwarning("Input Error", "Please enter a word before clicking Enter.")
 
