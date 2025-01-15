@@ -3,10 +3,10 @@
 
 #define BAUD_RATE 9600
 #define OVERSAMPLING_FACTOR 3
-#define SAMPLE_RATE (BAUD_RATE * OVERSAMPLING_FACTOR) // in sampler per second
+#define SAMPLE_RATE (BAUD_RATE * OVERSAMPLING_FACTOR) // in samples per second, make sure this is larger than the nyquist rate
 #define DEMOD_PIN 2U
 
-volatile byteBuffer[OVERSAMPLING_FACTOR * 8]; // buffer for oversampling one byte at a time
+volatile uint8_t byteBuffer[OVERSAMPLING_FACTOR * 8]; // buffer for oversampling one byte at a time
 volatile size_t sampleIndex = 0;
 volatile bool preambleDetected = false;
 volatile bool newDataReady = false;
@@ -21,7 +21,10 @@ volatile bool waitingForPreamble = true; // flag to track whether we are still w
 // timer / oversampling for the rest of the sequence
 void IRAM_ATTR timerIsrHandle() {
     // port manipulation instead of digitalRead for better computational efficiency
-    bool currentState = (PIND & (1 << DEMOD_PIN)) != 0; // check the state of PD2 or pin 2
+    // this does not work on esp32 like how it does on arduino, link here: https://stackoverflow.com/questions/52348930/esp32-direct-port-manipulation
+    // TODO fix this but for now, just use digitalRead
+    // bool currentState = (PIND & (1 << DEMOD_PIN)) != 0; // check the state of PD2 or pin 2
+    bool currentState = digitalRead(DEMOD_PIN);
 
     // store the signal in a buffer
     byteBuffer[sampleIndex++] = currentState;
@@ -35,8 +38,10 @@ void IRAM_ATTR timerIsrHandle() {
 
 // edge-triggering for the preamble
 void IRAM_ATTR gpioIsrHandle() {
-    // read the pin 
-    bool currentState = (PIND & (1 << DEMOD_PIN)) != 0;
+    // // read the pin 
+    // bool currentState = (PIND & (1 << DEMOD_PIN)) != 0;
+    bool currentState = digitalRead(DEMOD_PIN);
+    hw_timer_t *timer1 = timerBegin(1000000 / SAMPLE_RATE, );
 
     // shift the bits we've collected so far 
     oversampledBits = (oversampledBits << 1) | currentState;
@@ -51,8 +56,7 @@ void IRAM_ATTR gpioIsrHandle() {
             Serial.println("Preamble detected. Starting oversampling...");
 
             // now attach the interrupt to the timer function for oversampling 
-            Timer1.initialize(1000000 / SAMPLE_RATE) // timer1 function by default takes values in microseconds
-            Timer1.attachInterrupt(timerIsrHandle);
+            timerAttachInterrupt(timer1, &timerIsrHandle);
 
             detachInterrupt(digitalPinToInterrupt(DEMOD_PIN));
         }
@@ -64,7 +68,7 @@ uint8_t oversampleBit(uint8_t *buffer, size_t bitIndex) {
     uint8_t onesCount = 0;
     
     // oversample the current bit by the oversampling_factor times
-    for (size_t i = 0; i < OVERSAMPLING_FACTOR: i++) {
+    for (size_t i = 0; i < OVERSAMPLING_FACTOR; i++) {
         if (buffer[bitIndex * OVERSAMPLING_FACTOR + i] == HIGH) {
             onesCount++;
         }
@@ -121,9 +125,9 @@ void loop() {
             newDataReady = false;
 
             // process the data 
-            if (preamnleDetected) {
+            if (preambleDetected) {
                 // already have the preamble, demodulate the byte
-                uint8_t demodulatedByte = demodulateByte(signalBuffer);
+                uint8_t demodulatedByte = demodulateByte(byteBuffer);
                 Serial.print("Decoded Byte: ");
                 Serial.println(demodulatedByte, DEC); // print the decoded byte as a decimal
 
