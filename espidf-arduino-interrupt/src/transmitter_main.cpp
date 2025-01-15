@@ -57,7 +57,7 @@ void modulateString(const char *bytes, size_t modulatedBytesLen) {
   size_t pos = 0U;
 
   for(size_t index = 0U; index < modulatedBytesLen; index++) {
-    uint8_t modulatedByte[50U];
+    uint8_t modulatedByte[24U];
     size_t modulatedLen = 0U;
 
     /* Modulate the next byte. */
