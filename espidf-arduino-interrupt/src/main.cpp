@@ -3,21 +3,47 @@
 #include "freertos/xtensa_timer.h"
 #include "esp_intr_alloc.h"
 
-#define PHOTO_PIN A0
-#define BAUD_RATE 9600 // Bits per second
-#define BIT_DELAY (1000 / BAUD_RATE) // milliseconds per bit
+#define PHOTO_PIN 14
+#define MODULATION_FREQ 1 // for VLC
+#define BAUD_RATE 115200 // for serial communication
 #define THRESHOLD 500 // Adjust based on photodiode sensitivity
 #define START_BIT_DURATION 8U
 #define BUFFER_SIZE 256
 
+/**
+ * VOLATILE DECLARATIONS
+*/
+volatile bool sofDetected = false;
+volatile uint8_t risingPulseCount = 0;
+volatile uint8_t fallingPulseCount = 0;
+volatile uint8_t lastState = 0;
+
+/**
+ * GLOBAL VARIABLE
+*/
 hw_timer_t *My_timer = NULL;
 TaskHandle_t Task1;
 byte bitBuffer[BUFFER_SIZE]; // for decoding the incoming bits
 int bufferIndex = 0;
 
+
 void IRAM_ATTR onTimer(){
   digitalWrite(32, HIGH);
   digitalWrite(32, LOW);
+}
+
+void IRAM_ATTR start_measurement() {
+  int currentState = digitalRead(PHOTO_PIN);
+  if (currentState){ // currentState HI so rising edge detection
+    risingPulseCount++;
+  } else { // currentState LO so falling edge detection
+    fallingPulseCount++;
+  }
+
+  if (risingPulseCount >=8 && fallingPulseCount >= 8) { // we've detected 16 successful transitions
+    sofDetected = true;
+    detachInterrupt(PHOTO_PIN); // detach until we need to start detecting SOF again
+  }
 }
 
 void Task1code( void * parameter) {
@@ -28,77 +54,7 @@ void Task1code( void * parameter) {
   }
 }
 
-byte readByte() {
-  /**
-   * Demodulation code for the actual photodiode based on thresholding
-  */
-  // byte data = 0;
-
-  // // Wait for Start Bit (LOW)
-  // while (analogRead(PHOTO_PIN) > THRESHOLD) {
-  //   // Do nothing until start bit is detected
-  // }
-  // delay(BIT_DELAY / 2); // Wait half a bit duration for alignment
-
-  // // Read Data Bits
-  // for (int i = 0; i < 8; i++) {
-  //   delay(BIT_DELAY); // Wait for the next bit
-  //   if (analogRead(PHOTO_PIN) > THRESHOLD) {
-  //     data |= (1 << i); // Set the bit if HIGH
-  //   }
-  // }
-
-  // // Wait for Stop Bit
-  // delay(BIT_DELAY);
-
-  // return data;
-
-  /**
-   * Demodulation code for the serial line from tx esp
-  */
- byte data = 0;
-
- // start of frame = 8 HIGH bits
- for (int i = 0; i < 8; i++){
-
-  delay(BIT_DELAY / 2); // waiting for the bit to stabilize; nyquist theorem or whatever
-  if (digitalRead(PHOTO_PIN) == HIGH){
-    data |= (1 << i);
-  }
-
-  delay(BIT_DELAY / 2); // wait for the next bit; poll at least twice in the bit duration
- }
-
- // wait for the stop bit (HIGH as well??)
-//  delay(BIT_DELAY);
-
- return data;
-}
-
-bool detectStartOfFrame() {
-  int startBitDuration = 0;
-  bool startDetected = false;
-
-  while (digitalRead(PHOTO_PIN) == LOW) {
-    // do nothing
-  }
-
-  while (digitalRead(PHOTO_PIN) == HIGH && startBitDuration < START_BIT_DURATION) {
-    startBitDuration++;
-    delay(BIT_DELAY);
-
-    if (startBitDuration >= START_BIT_DURATION) {
-      startDetected = true;
-      break;
-    }
-  }
-
-  // return whether or not we've seen the start of frame pattern
-  return startDetected;
-}
-
 void setup(){
-  pinMode(8,OUTPUT);
   pinMode(32,OUTPUT);
   
   xTaskCreatePinnedToCore( // create a task on core 0 to make sure that still works with core 1 interrupts disabled later
@@ -118,29 +74,12 @@ void setup(){
 
   Serial.begin(BAUD_RATE);
   pinMode(PHOTO_PIN, INPUT);
+  attachInterrupt(PHOTO_PIN, start_measurement, CHANGE);
 }
 
 void loop() {
-  if (detectStartOfFrame()) { // only proceed once we've detected the start
-    byte receivedByte;
-    while (1) {
-      receivedByte = readByte();
-
-      if (receivedByte != 0){ // checking for garbage values or null bytes
-          Serial.print("Received Byte: \n");
-          Serial.println(receivedByte, BIN);
-
-          // decode the byte into its ascii from
-          char decodedChar = (char) receivedByte;
-          Serial.println("Decoded char: ");
-          Serial.println(decodedChar);
-      }
-
-      delay(100); // NEED TO adjust this based on our own timing
-    }
+  if (sofDetected) {
+    Serial.println("Start of frame detected");
+    sofDetected = false;
   }
-  byte receivedByte = readByte();
-  Serial.print("Received Byte: \n");
-  Serial.println(receivedByte, BIN);
-  delay(900);
 }
