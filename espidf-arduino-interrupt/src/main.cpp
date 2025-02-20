@@ -8,9 +8,10 @@
 #define MODULATED_BYTES_MAX_LEN 1028
 #define SIGNAL_TO_DATA_RATIO    1
 #define BITS_PER_BYTE           8
-#define PULSE_DELAY_MS          100 /* Represents ~1/2 period for a single pulse. */
+#define PULSE_DELAY_MS          500 /* Represents ~1/2 period for a single pulse. */
 
-#define LED_GPIO                8
+#define LED_GPIO                0
+#define LED_GPIO_HIGH           BIT0
 
 uint8_t modulatedBytes[MODULATED_BYTES_MAX_LEN];
 
@@ -40,7 +41,10 @@ void modulateByte(uint8_t byte, uint8_t *modulatedByte, size_t &modulatedByteLen
   /* TODO: make sure the modulatedByte buffer is big enough. */
   modulatedByteLen = SIGNAL_TO_DATA_RATIO * BITS_PER_BYTE;
 
-  Serial.print("\n\nOriginal byte: ");
+  Serial.print("\n\nOriginal byte (decimal): ");
+  Serial.print(byte);
+  Serial.print("\nOriginal byte (binary): ");
+
   for(int bitIndex = 7; bitIndex >= 0; bitIndex--) {
     nextBit = (byte & 0x80) >> 7; // get left-most bit.
     Serial.print(nextBit); // debugging print
@@ -50,7 +54,6 @@ void modulateByte(uint8_t byte, uint8_t *modulatedByte, size_t &modulatedByteLen
       modulatedByte[index] = nextBit;
       index++;
     }
-
     byte <<= 1; // left bit-shift once.
   }
 
@@ -105,16 +108,16 @@ int modulateString(const char *bytes, size_t bytesLen, uint8_t *modulatedBytes, 
 }
 
 void pulseBinary1() {
-  digitalWrite(LED_GPIO, HIGH);
+  REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) | LED_GPIO_HIGH);
   delay(PULSE_DELAY_MS);
-  digitalWrite(LED_GPIO, LOW);
+  REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) & (~LED_GPIO_HIGH));
   delay(PULSE_DELAY_MS);
 }
 
 void pulseBinary0() {
-  digitalWrite(LED_GPIO, LOW);
+  REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) & (~LED_GPIO_HIGH));
   delay(PULSE_DELAY_MS);
-  digitalWrite(LED_GPIO, LOW);
+  REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) & (~LED_GPIO_HIGH));
   delay(PULSE_DELAY_MS);
 }
 
@@ -154,11 +157,14 @@ void setup(){
   int ret = modulateString(&message[0U], strlen(message), &modulatedBytes[0U], MODULATED_BYTES_MAX_LEN);
 
   /* Delay one second before starting transmission. */
-  delay(1000);
-  
+  delay(3000);
+
   /* Output the start-of-frame sequence. */
   outputStartOfFrame();
 
+  Serial.println("\nSent SOF");
+
+  uint8_t val = 0;
   /* Output the signal. */
   for(int i = 0; i < strlen(message) * BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
     if(modulatedBytes[i] == 1) {
@@ -168,8 +174,13 @@ void setup(){
       /* Output a low. */
       pulseBinary0();
     }
+    val++;
   }
-  Serial.print("\nDone modulation.");
+  Serial.print(val);
+  Serial.print("\nSent message.");
+
+  /* TESTING photodiode - just outputting straight DC signal*/
+  // REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) | LED_GPIO_HIGH);
 }
 
 void loop(){
