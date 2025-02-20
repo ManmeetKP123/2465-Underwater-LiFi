@@ -4,10 +4,10 @@
 #include "esp_intr_alloc.h"
 
 #define PHOTO_PIN 14
-#define BIT_PERIOD_S 1 // period of each transmitted bit pulse, in ms
+#define BIT_PERIOD_MS 1000 // period of each transmitted bit pulse
 #define BAUD_RATE 115200 // for serial communication
 #define SAMPLE_RATE_HZ 10000
-#define SAMPLES_PER_PERIOD (SAMPLE_RATE_HZ *  BIT_PERIOD_S)
+#define SAMPLES_PER_PERIOD ((SAMPLE_RATE_HZ *  BIT_PERIOD_MS) / 1000)
 #define TIMER_TICK_US (1000000 / SAMPLE_RATE_HZ)
 #define TIMER_PRESCALER 80
 #define THRESHOLD 500 // Adjust based on photodiode sensitivity
@@ -23,15 +23,17 @@ volatile uint8_t fallingPulseCount = 0;
 volatile uint8_t lastState = 0;
 volatile bool byteReady =  false;
 volatile uint8_t sampleBuffer[SAMPLES_PER_PERIOD];
-volatile uint32_t bitCounter = 0; // for 20000 data points for 20kHz sampling freq
+volatile uint32_t sampleCounter = 0; // for 20000 data points for 20kHz sampling freq
 volatile bool periodComplete = false;
 volatile unsigned long lastSampleTime = 0;
 volatile bool samplingComplete = false;
+volatile uint32_t onesCount = 0;
+volatile uint32_t zerosCount = 0;
 
 /**
  * GLOBAL VARIABLES
 */
-byte byteBuffer[BUFFER_SIZE]; // for decoding the incoming bits
+uint8_t byteBuffer[BUFFER_SIZE]; // for decoding the incoming bits
 uint8_t bufferIndex = 0;
 hw_timer_t *timer = NULL;
 uint8_t currentByte = 0;
@@ -60,12 +62,18 @@ void IRAM_ATTR startOfFrameISR() {
 }
 
 void IRAM_ATTR samplingISR() {
-  sampleBuffer[bitCounter] = (GPIO.in >> PHOTO_PIN) & 1;
-  bitCounter++;
+  uint8_t currentBit = (GPIO.in >> PHOTO_PIN) & 1;
 
-  if (bitCounter >= SAMPLES_PER_PERIOD) {
+  if (currentBit) {
+    onesCount++;
+  } else {
+    zerosCount++;
+  }
+  sampleCounter++;
+
+  if (sampleCounter >= SAMPLES_PER_PERIOD) {
     samplingComplete = true;
-    bitCounter = 0;
+    sampleCounter = 0;
   }
 }
 
@@ -83,7 +91,7 @@ void setup(){
   timer = timerBegin(0, TIMER_PRESCALER, true);
   // slowest the timer interrupt can be implemented is 1220.7Hz;
   timerAttachInterrupt(timer, &samplingISR, true);
-  // count up from 0 to 99999 for 1s timer; sampling rate of 20kHz
+  // count up from 0 to 9999 for 1s timer; sampling rate of 20kHz
   timerAlarmWrite(timer, TIMER_TICK_US, true);
   Serial.println("AHHHHHHHHHH");
 }
@@ -91,86 +99,55 @@ void setup(){
 void loop() {
   if (sofDetected) {
     detachInterrupt(PHOTO_PIN); // detach until we need to start detecting SOF again
-    Serial.println("Start of frame detected");
+    // Serial.println("Start of frame detected");
     sofDetected = false;
     
     timerAlarmEnable(timer);   // Start sampling
     bufferIndex = 0;
     currentByte = 0;
-    bitCounter = 0;
+    sampleCounter = 0;
   } else if (samplingComplete) {
     samplingComplete = false;
 
-    int onesCount = 0, zerosCount = 0;
-
-    for (int i = 0; i < SAMPLES_PER_PERIOD; i++) {
-      if (sampleBuffer[i]){
-        onesCount++;
-      } else {
-        zerosCount++;
-      }
-    }
-
     uint8_t bitValue = (onesCount > (zerosCount - (SAMPLES_PER_PERIOD / 2))) ? 1 : 0;
-    currentByte |= (bitValue << bitCount);
+    currentByte = (currentByte << 1) | bitValue;
+
     bitCount++;
 
     // reset for the next sampling interval
-    bitCounter = 0;
-    
+    sampleCounter = 0;
+    onesCount = 0;
+    zerosCount = 0;
 
     if (bitCount >= BITS_PER_BYTE){
-      Serial.print("Collected byte: ");
-      // Serial.println(lengthOfMessage, DEC);
-      for (int i = 0; i < 8U; i++){
-        Serial.print(byteBuffer[i]);
-      }
-      Serial.println();
-
       if (!lengthDetected){
         lengthOfMessage = currentByte;
-        lengthDetected = false;
+        Serial.print("Expected number of bytes: ");
+        Serial.println(lengthOfMessage);
+        lengthDetected = true;
       } else {
-        byteBuffer[bufferIndex] = currentByte; 
-        bufferIndex++;
         if (bufferIndex >= lengthOfMessage) {
           timerAlarmDisable(timer);
-          attachInterrupt(PHOTO_PIN, startOfFrameISR, CHANGE);
+          //attachInterrupt(PHOTO_PIN, startOfFrameISR, CHANGE);
 
           Serial.print("this is the received string: ");
           for (int i = 0; i < BUFFER_SIZE; i++){
             Serial.print(byteBuffer[i]);
           }
           Serial.println();
+
+          // reset for the next message
+          bufferIndex = 0;
+          currentByte = 0;
+          bitCount = 0;
+
+          
+        } else {
+          byteBuffer[bufferIndex] = currentByte; 
+          bufferIndex++;
         }
       }
+
     }
-    // bitBuffer[bufferIndex] = pulseBit;
-    // bufferIndex++;
-
-
-    // if (bufferIndex >= 8U) {
-      // if (!lengthDetected){
-      //   lengthOfMessage = bitBuffer[7];
-        
-      //   for (int i = 6; i >= 0; i--){
-      //     lengthOfMessage = (lengthOfMessage << 1) | bitBuffer[i];
-      //   }
-      // }
-    //   Serial.print("Collected byte: ");
-    //   // Serial.println(lengthOfMessage, DEC);
-    //   for (int i = 0; i < 8U; i++){
-    //     Serial.print(bitBuffer[i]);
-    //   }
-    //   Serial.println();
-    //   bufferIndex = 0;
-    // }
   }
-
-  // if (byteReady) {
-  //   byteReady = false;
-
-  //   Serial.print("Expected length of signal: ");
-  //   Serial.println(currentByte, DEC);
-  // }
 }
