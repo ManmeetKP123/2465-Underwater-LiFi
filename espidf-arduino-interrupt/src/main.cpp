@@ -8,7 +8,7 @@
 #define MODULATED_BYTES_MAX_LEN 1028
 #define SIGNAL_TO_DATA_RATIO    1
 #define BITS_PER_BYTE           8
-#define PULSE_DELAY_MS          500 /* Represents ~1/2 period for a single pulse. */
+#define PULSE_DELAY_MS          25 /* Represents ~1/2 period for a single pulse. */
 
 #define LED_GPIO                0
 #define LED_GPIO_HIGH           BIT0
@@ -153,7 +153,7 @@ void setup(){
   // ESP_INTR_DISABLE(XT_TIMER_INTNUM); // disables the tick interrupt
 
   /* Debugging - hardcode the string to send. */
-  const char message[] = "hello";
+  const char message[] = "hihellogoodbyeugh";
   int ret = modulateString(&message[0U], strlen(message), &modulatedBytes[0U], MODULATED_BYTES_MAX_LEN);
 
   /* Delay one second before starting transmission. */
@@ -165,6 +165,31 @@ void setup(){
   Serial.println("\nSent SOF");
 
   uint8_t val = 0;
+  /* Output the signal. */
+  for(int i = 0; i < strlen(message) * BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
+    if(modulatedBytes[i] == 1) {
+      /* Output a high. */
+      pulseBinary1();
+    } else {
+      /* Output a low. */
+      pulseBinary0();
+    }
+    val++;
+  }
+  Serial.print(val);
+  Serial.print("\nSent message.");
+
+  // SENDING SECOND MESSAGE
+
+  /* Delay 3 second before starting transmission. */
+  delay(3000);
+
+  /* Output the start-of-frame sequence. */
+  outputStartOfFrame();
+
+  Serial.println("\nSent second SOF");
+
+  val = 0;
   /* Output the signal. */
   for(int i = 0; i < strlen(message) * BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
     if(modulatedBytes[i] == 1) {
