@@ -4,9 +4,9 @@
 #include "esp_intr_alloc.h"
 
 #define PHOTO_PIN 14
-#define BIT_PERIOD_MS 1000 // period of each transmitted bit pulse
+#define BIT_PERIOD_MS 50 // period of each transmitted bit pulse
 #define BAUD_RATE 115200 // for serial communication
-#define SAMPLE_RATE_HZ 10000
+#define SAMPLE_RATE_HZ 50000
 #define SAMPLES_PER_PERIOD ((SAMPLE_RATE_HZ *  BIT_PERIOD_MS) / 1000)
 #define TIMER_TICK_US (1000000 / SAMPLE_RATE_HZ)
 #define TIMER_PRESCALER 80
@@ -105,7 +105,6 @@ void loop() {
     timerAlarmEnable(timer);   // Start sampling
     bufferIndex = 0;
     currentByte = 0;
-    sampleCounter = 0;
   } else if (samplingComplete) {
     samplingComplete = false;
 
@@ -115,7 +114,6 @@ void loop() {
     bitCount++;
 
     // reset for the next sampling interval
-    sampleCounter = 0;
     onesCount = 0;
     zerosCount = 0;
 
@@ -125,29 +123,19 @@ void loop() {
         Serial.print("Expected number of bytes: ");
         Serial.println(lengthOfMessage);
         lengthDetected = true;
-      } else {
-        if (bufferIndex >= lengthOfMessage) {
-          timerAlarmDisable(timer);
-          //attachInterrupt(PHOTO_PIN, startOfFrameISR, CHANGE);
-
-          Serial.print("this is the received string: ");
-          for (int i = 0; i < BUFFER_SIZE; i++){
-            Serial.print(byteBuffer[i]);
-          }
-          Serial.println();
-
-          // reset for the next message
-          bufferIndex = 0;
-          currentByte = 0;
-          bitCount = 0;
-
-          
-        } else {
+      } else {   
           byteBuffer[bufferIndex] = currentByte; 
           bufferIndex++;
-        }
+          if (bufferIndex >= lengthOfMessage) {
+            timerAlarmDisable(timer);
+            bufferIndex = 0;
+            attachInterrupt(PHOTO_PIN, startOfFrameISR, CHANGE);
+          }
       }
-
+      Serial.print("ASCII value of the incoming byte: ");
+      Serial.println(static_cast<char>(currentByte));
+      currentByte = 0;
+      bitCount = 0;
     }
   }
 }
