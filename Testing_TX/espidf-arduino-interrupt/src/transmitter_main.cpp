@@ -8,7 +8,7 @@
 #define MODULATED_BYTES_MAX_LEN 1028
 #define SIGNAL_TO_DATA_RATIO    1
 #define BITS_PER_BYTE           8
-#define PULSE_DELAY_US          24 /* Represents ~1/2 period for a single pulse. */ // 
+#define PULSE_DELAY_US          24 //24 /* Represents ~1/2 period for a single pulse. */ // 
 #define LED_GPIO                14
 #define LED_GPIO_HIGH           BIT0
 
