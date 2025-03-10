@@ -6,7 +6,7 @@
 #define PHOTO_PIN 14
 #define BIT_PERIOD_US 48 // period of each transmitted bit pulse
 #define BAUD_RATE 115200 // for serial communication
-#define SAMPLE_RATE_HZ 500000 // was 50khz before 
+#define SAMPLE_RATE_HZ 150000 // was 50khz before // NOTE SEMI WORKS AT 150kHz??
 #define SAMPLES_PER_PERIOD ((SAMPLE_RATE_HZ *  BIT_PERIOD_US) / 1000000)
 #define TIMER_TICK_US (1000000 / SAMPLE_RATE_HZ)
 #define TIMER_PRESCALER 80
@@ -50,9 +50,6 @@ char fullMessage[BUFFER_SIZE];
  * HELPER FUNCTIONS
 */
 void IRAM_ATTR startOfFrameISR() {
-  // read the GPIO pin directly via port manipulation, digitalRead might cause jitters
-  // int currentState = (GPIO_IN_REG & (1 << PHOTO_PIN)) ? 1 : 0;
- 
   int currentState = (GPIO.in >> PHOTO_PIN) & 1;
 
   if (currentState){ // currentState HI so rising edge detection
@@ -63,8 +60,6 @@ void IRAM_ATTR startOfFrameISR() {
 
   if (risingPulseCount >=8 && fallingPulseCount >= 8) { // we've detected 16 successful transitions
     detachInterrupt(PHOTO_PIN);
-    // bufferIndex = 0;
-    // currentByte = 0;
     // may need to add a half period delay?
     delayMicroseconds(BIT_PERIOD_US/2);
     timerAlarmEnable(timer);
@@ -78,18 +73,6 @@ void IRAM_ATTR samplingISR() {
   sampleBuffer[sampleCounter] = currentBit;
   sampleCounter++;
 
-  // if (currentBit) {
-  //   onesCount++;
-  // } else {
-  //   sampleBuffer[sampleIndex] = currentBit
-  //   zerosCount++;
-  // }
-
-  // if (sampleCounter >= SAMPLES_PER_PERIOD) {
-  //   samplingComplete = true;
-  //   sampleCounter = 0;
-  // }
-
   if (sampleCounter >= SAMPLE_SIZE) {
     timerDetachInterrupt(timer);
     samplingComplete = true;
@@ -97,9 +80,7 @@ void IRAM_ATTR samplingISR() {
 }
 
 void processing_buffer(){
-  for (int i=0;i<16;i++){
-    Serial.println(sampleBuffer[i]);
-  }
+  // Implement maybe? To clear up loop?
 }
 
 /**
@@ -134,19 +115,42 @@ void loop() {
           zerosCount++;
         }
       }
-      //uint8_t bitValue =  (onesCount > (zerosCount - (SAMPLES_PER_PERIOD / 2))) ? 1 : 0;
-      Serial.println((double)onesCount/(double)zerosCount);
-      uint8_t bitValue =  ((double)onesCount/(double)zerosCount > 1.5) ? 1 : 0;
-
-
+      uint8_t bitValue =  (onesCount > (zerosCount - (SAMPLES_PER_PERIOD / 2))) ? 1 : 0;
       currentByte = (currentByte << 1) | bitValue;
-      bitBuffer[j] = bitValue;
       zerosCount=0;
       onesCount=0;
     }
-    Serial.print("Current Byte: ");
+    Serial.print("Length of Message: ");
     Serial.println(currentByte);
 
+    lengthOfMessage = currentByte;
+    currentByte = 0;
+
+    for(int k=1;k<lengthOfMessage+1;k++){
+      for(int j=k*BITS_PER_BYTE;j<(k+1)*BITS_PER_BYTE;j++){
+        for (int i=j*SAMPLES_PER_PERIOD;i<(j+1)*SAMPLES_PER_PERIOD;i++){
+          //Serial.println(sampleBuffer[i]);
+          if (sampleBuffer[i]){
+            onesCount++;
+          }
+          else {
+            zerosCount++;
+          }
+        }
+        uint8_t bitValue =  (onesCount > (zerosCount - (SAMPLES_PER_PERIOD / 2))) ? 1 : 0;
+        currentByte = (currentByte << 1) | bitValue;
+        zerosCount=0;
+        onesCount=0;
+      }
+      Serial.println(currentByte);
+      
+      fullMessage[bufferIndex] = static_cast<char>(currentByte);
+      bufferIndex++;
+      currentByte = 0;
+    }
+
+    Serial.print("Full Message Recieved: ");
+    Serial.println(fullMessage);
 
     // processing bits
 

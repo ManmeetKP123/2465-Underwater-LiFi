@@ -149,9 +149,9 @@ void setup(){
 
   /* Output the start-of-frame sequence. */
   outputStartOfFrame();
-  // delay(50);
+  
 
-  Serial.println("\nSent SOF");
+  // Serial.println("\nSent SOF");
 
   uint8_t val = 0;
   /* Output the signal. */
@@ -165,7 +165,7 @@ void setup(){
     }
     val++;
   }
-  Serial.println(val);
+  //Serial.println(val);
   Serial.println("\nSent message.");
 
   // xTaskCreatePinnedToCore( // create a task on core 0 to make sure that still works with core 1 interrupts disabled later
