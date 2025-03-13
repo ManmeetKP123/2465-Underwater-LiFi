@@ -8,7 +8,7 @@
 #define MODULATED_BYTES_MAX_LEN 1028
 #define SIGNAL_TO_DATA_RATIO    1
 #define BITS_PER_BYTE           8
-#define PULSE_DELAY_US          24 //24 /* Represents ~1/2 period for a single pulse. */ // 
+#define PULSE_DELAY_US          25 //24 /* Represents ~1/2 period for a single pulse. */ // 
 #define LED_GPIO                14
 #define LED_GPIO_HIGH           BIT0
 
@@ -138,6 +138,8 @@ void outputStartOfFrame() {
 
 void setup(){
   pinMode(LED_GPIO, OUTPUT);
+  //pinMode(8, OUTPUT);
+  digitalWrite(8,1);
   Serial.begin(115200);
 
   /* Debugging - hardcode the string to send. */
@@ -149,6 +151,8 @@ void setup(){
 
   /* Output the start-of-frame sequence. */
   outputStartOfFrame();
+  //digitalWrite(8,0);
+  delayMicroseconds(PULSE_DELAY_US*4);
   
 
   // Serial.println("\nSent SOF");
@@ -165,6 +169,7 @@ void setup(){
     }
     val++;
   }
+  //digitalWrite(8,1);
   //Serial.println(val);
   Serial.println("\nSent message.");
 

@@ -4,10 +4,10 @@
 #include "esp_intr_alloc.h"
 
 #define PHOTO_PIN 14
-#define BIT_PERIOD_US 48 // period of each transmitted bit pulse
+#define BIT_PERIOD_US 50 // period of each transmitted bit pulse
 #define BAUD_RATE 115200 // for serial communication
-#define SAMPLE_RATE_HZ 150000 // was 50khz before // NOTE SEMI WORKS AT 150kHz??
-#define SAMPLES_PER_PERIOD ((SAMPLE_RATE_HZ *  BIT_PERIOD_US) / 1000000)
+#define SAMPLE_RATE_HZ 200000 // was 50khz before // NOTE SEMI WORKS AT 150kHz??
+#define SAMPLES_PER_PERIOD ((SAMPLE_RATE_HZ *  BIT_PERIOD_US) / 1000000) 
 #define TIMER_TICK_US (1000000 / SAMPLE_RATE_HZ)
 #define TIMER_PRESCALER 80
 #define THRESHOLD 500 // Adjust based on photodiode sensitivity
@@ -49,6 +49,19 @@ char fullMessage[BUFFER_SIZE];
 /**
  * HELPER FUNCTIONS
 */
+
+void IRAM_ATTR samplingISR() {
+  uint8_t currentBit = (GPIO.in >> PHOTO_PIN) & 1;
+  sampleBuffer[sampleCounter] = currentBit;
+  sampleCounter++;
+  
+
+  if (sampleCounter >= SAMPLE_SIZE) {
+    timerDetachInterrupt(timer);
+    samplingComplete = true;
+    //digitalWrite(8,0);
+  }
+}
 void IRAM_ATTR startOfFrameISR() {
   int currentState = (GPIO.in >> PHOTO_PIN) & 1;
 
@@ -61,23 +74,15 @@ void IRAM_ATTR startOfFrameISR() {
   if (risingPulseCount >=8 && fallingPulseCount >= 8) { // we've detected 16 successful transitions
     detachInterrupt(PHOTO_PIN);
     // may need to add a half period delay?
-    delayMicroseconds(BIT_PERIOD_US/2);
+    //digitalWrite(8,1);
+    //delayMicroseconds(BIT_PERIOD_US/3);
+    //samplingISR();
     timerAlarmEnable(timer);
     
 
   }
 }
 
-void IRAM_ATTR samplingISR() {
-  uint8_t currentBit = (GPIO.in >> PHOTO_PIN) & 1;
-  sampleBuffer[sampleCounter] = currentBit;
-  sampleCounter++;
-
-  if (sampleCounter >= SAMPLE_SIZE) {
-    timerDetachInterrupt(timer);
-    samplingComplete = true;
-  }
-}
 
 void processing_buffer(){
   // Implement maybe? To clear up loop?
@@ -87,7 +92,7 @@ void processing_buffer(){
  * MAIN
 */
 void setup(){
-  pinMode(32,OUTPUT);
+  pinMode(8,OUTPUT);
   ESP_INTR_DISABLE(XT_TIMER_INTNUM); // disables the tick interrupt
   Serial.begin(BAUD_RATE);
   pinMode(PHOTO_PIN, INPUT);
@@ -107,7 +112,7 @@ void loop() {
     // finding length of message
     for(int j=0;j<BITS_PER_BYTE;j++){
       for (int i=j*SAMPLES_PER_PERIOD;i<(j+1)*SAMPLES_PER_PERIOD;i++){
-        //Serial.println(sampleBuffer[i]);
+        Serial.println(sampleBuffer[i]);
         if (sampleBuffer[i]){
           onesCount++;
         }
@@ -129,7 +134,7 @@ void loop() {
     for(int k=1;k<lengthOfMessage+1;k++){
       for(int j=k*BITS_PER_BYTE;j<(k+1)*BITS_PER_BYTE;j++){
         for (int i=j*SAMPLES_PER_PERIOD;i<(j+1)*SAMPLES_PER_PERIOD;i++){
-          //Serial.println(sampleBuffer[i]);
+          Serial.println(sampleBuffer[i]);
           if (sampleBuffer[i]){
             onesCount++;
           }
@@ -142,7 +147,7 @@ void loop() {
         zerosCount=0;
         onesCount=0;
       }
-      Serial.println(currentByte);
+      //Serial.println(currentByte);
       
       fullMessage[bufferIndex] = static_cast<char>(currentByte);
       bufferIndex++;
