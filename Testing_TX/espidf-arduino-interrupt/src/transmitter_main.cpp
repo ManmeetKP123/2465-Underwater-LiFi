@@ -19,19 +19,6 @@ uint8_t modulatedBytes[MODULATED_BYTES_MAX_LEN];
 hw_timer_t *My_timer = NULL;
 TaskHandle_t Task1;
 
-void IRAM_ATTR onTimer(){
-  digitalWrite(32, HIGH);
-  digitalWrite(32, LOW);
-}
-
-void Task1code( void * parameter) {
-  for(;;) {
-    digitalWrite(32, HIGH);
-    digitalWrite(32, LOW);
-    vTaskDelay(1);
-  }
-}
-
 /* Functions for encoding and sending data. */
 void modulateByte(uint8_t byte, uint8_t *modulatedByte, size_t &modulatedByteLen) {
   /* The number of periods that represent a single bit of data. */
@@ -109,7 +96,7 @@ int modulateString(const char *bytes, size_t bytesLen, uint8_t *modulatedBytes, 
 }
 
 void pulseBinary1() {
-  digitalWrite(LED_GPIO, HIGH);
+  digitalWrite(LED_GPIO, LOW);
   // REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) | LED_GPIO_HIGH);
   delayMicroseconds(PULSE_DELAY_US);
   digitalWrite(LED_GPIO, HIGH);
@@ -118,7 +105,7 @@ void pulseBinary1() {
 }
 
 void pulseBinary0() {
-  digitalWrite(LED_GPIO, HIGH);
+  digitalWrite(LED_GPIO, LOW);
   // REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) & (~LED_GPIO_HIGH));
   delayMicroseconds(PULSE_DELAY_US);
   digitalWrite(LED_GPIO, LOW);
@@ -134,10 +121,11 @@ void pulseBinary0() {
 void outputStartOfFrame() {
   /* Output a high. */
   for(int i = 0; i < BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
-      pulseBinary1();
+      digitalWrite(LED_GPIO,HIGH);
+      delayMicroseconds(PULSE_DELAY_US*2);
   }
-  digitalWrite(LED_GPIO,LOW);
-  delayMicroseconds(PULSE_DELAY_US);
+  // digitalWrite(LED_GPIO,LOW);
+  // delayMicroseconds(PULSE_DELAY_US);
 }
 
 void setup(){
