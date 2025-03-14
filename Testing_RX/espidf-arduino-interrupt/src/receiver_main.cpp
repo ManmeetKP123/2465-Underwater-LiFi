@@ -131,7 +131,6 @@ void thresholding_output(){
                 bitBuffer[k++] = 0;
               }
           } else {
-              // For shorter pulses, decide based on the duration.
               if (count >= oneHigh - tolerance){
                 bitBuffer[k++]=1;
               }
@@ -145,10 +144,6 @@ void thresholding_output(){
           i++;
       }
   }
-
-//   for(int i=0; i< sizeof(bitBuffer)/sizeof(bitBuffer[0]);i++){
-//     Serial.println(bitBuffer[i]);
-//  }
 }
 
 void output_transmission() {
@@ -206,147 +201,6 @@ void loop() {
     thresholding_output();
     output_transmission();
     
-
-
-
-    // finding length of message
-    // for(int j=0;j<BITS_PER_BYTE;j++){
-    //   for (int i=j*SAMPLES_PER_PERIOD;i<=(j+1)*SAMPLES_PER_PERIOD;i++){
-    //     Serial.println(cleanedBuffer[i]);
-    //     if (cleanedBuffer[i]){
-    //       onesCount++;
-    //     }
-    //     else {
-    //       zerosCount++;
-    //     }
-    //   }
-    //   uint8_t bitValue =  (zerosCount > (onesCount - (SAMPLES_PER_PERIOD / 2))) ? 0 : 1;
-    //   currentByte = (currentByte << 1) | bitValue;
-    //   zerosCount=0;
-    //   onesCount=0;
-    // }
-    // Serial.print("Length of Message: ");
-    // Serial.println(currentByte);
-
-    // lengthOfMessage = currentByte;
-    // currentByte = 0;
-
-    // for(int k=1;k<lengthOfMessage+1;k++){
-    //   for(int j=k*BITS_PER_BYTE;j<(k+1)*BITS_PER_BYTE;j++){
-    //     for (int i=j*SAMPLES_PER_PERIOD;i<=(j+1)*SAMPLES_PER_PERIOD;i++){
-    //       Serial.println(cleanedBuffer[i]);
-    //       if (cleanedBuffer[i]){
-    //         onesCount++;
-    //       }
-    //       else {
-    //         zerosCount++;
-    //       }
-    //     }
-    //     uint8_t bitValue =  (zerosCount > (onesCount - (SAMPLES_PER_PERIOD / 2))) ? 0 : 1;
-    //     currentByte = (currentByte << 1) | bitValue;
-    //     zerosCount=0;
-    //     onesCount=0;
-    //   }
-    //   //Serial.println(currentByte);
-      
-    //   fullMessage[bufferIndex] = static_cast<char>(currentByte);
-    //   bufferIndex++;
-    //   currentByte = 0;
-    // }
-
-    // Serial.print("Full Message Recieved: ");
-    // Serial.println(fullMessage);
-
-
-
-
-
-
-    // processing bits
-
-    // samplingComplete = false;
-    // // Adding but to buffer in time efficient way - no processing, just checking if buffer is full
-    // uint8_t bitValue = (onesCount > (zerosCount - (SAMPLES_PER_PERIOD / 2))) ? 1 : 0;
-    // // uint8_t bitValue = (onesCount > zerosCount) ? 1 : 0;
-    // bitBuffer[bitbufferIndex] = bitValue;
-    // bitbufferIndex++;
-    // if (bitbufferIndex>= BIT_BUFFER_SIZE){
-    //   timerDetachInterrupt(timer);
-    //   samplingComplete = false;
-    //   processing_buffer();
-    // }
-    // onesCount = 0;
-    // zerosCount = 0;
-    
   }
 }
 
-// Graveyard:
-
-
-    // Computational code - just saving bit values, and if this doesnt work just take sample values
-  //   currentByte = (currentByte << 1) | bitValue;
-  //   bitCount++;
-
-  //   if (bitCount >= BITS_PER_BYTE){
-  //     byteBuffer[bufferIndex] = currentByte; 
-  //     bufferIndex++;
-  //     if (bufferIndex >= BUFFER_SIZE){
-  //       timerAlarmDisable(timer);
-  //       samplingComplete = false;
-  //       processing_buffer();
-  //     }
-  //   }
-  //   // reset for the next sampling interval
-  //   onesCount = 0;
-  //   zerosCount = 0;
-  //   currentByte = 0;
-  //   bitCount = 0;
-
- //Serial.println(samplingComplete);
-  // if (sofDetected) {
-  //   detachInterrupt(PHOTO_PIN); // detach until we need to start detecting SOF again
-  //   // Serial.println("Start of frame detected");
-  //   sofDetected = false;
-    
-  //   timerAlarmEnable(timer);   // Start sampling
-  //   bufferIndex = 0;
-  //   currentByte = 0;
-  //   Serial.println("SOF detected");
-  // };
-   
-
-    // if (bitCount >= BITS_PER_BYTE){
-    //   if (!lengthDetected){
-    //     lengthOfMessage = currentByte;
-    //     // Serial.print("Expected number of bytes: ");
-    //     // Serial.println(lengthOfMessage);
-    //     lengthDetected = true;
-    //   } 
-    //   else {   
-    //     byteBuffer[bufferIndex] = currentByte; 
-    //     bufferIndex++;
-    //     Serial.print("ASCII value of the incoming byte: ");
-    //     Serial.println(static_cast<char>(currentByte));
-    //     if (bufferIndex >= lengthOfMessage) {
-    //         timerAlarmDisable(timer);
-    //         bufferIndex = 0;
-    //         currentByte = 0;
-    //         bitCount = 0;
-    //         samplingComplete = false;
-    //         lengthDetected = false;
-    //         for (int i = 0; i < lengthOfMessage; i++) {
-    //         fullMessage[i] = static_cast<char>(byteBuffer[i]);
-    //             }
-    //         fullMessage[lengthOfMessage] = '\0'; // Null-terminate the string
-    
-    //         // Print the complete message
-    //         Serial.print("Complete message received: ");
-    //         Serial.println(fullMessage);
-    //         attachInterrupt(PHOTO_PIN, startOfFrameISR, CHANGE);
-    //       }
-    //   }
-    // //   Serial.print("ASCII value of the incoming byte: ");
-    // //   Serial.println(static_cast<char>(currentByte));
-    //   currentByte = 0;
-    //   bitCount = 0;
