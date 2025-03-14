@@ -1,3 +1,5 @@
+// 
+
 #include <Arduino.h>
 #include <uart_driver.h>
 
@@ -110,13 +112,13 @@ void pulseBinary1() {
   digitalWrite(LED_GPIO, HIGH);
   // REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) | LED_GPIO_HIGH);
   delayMicroseconds(PULSE_DELAY_US);
-  digitalWrite(LED_GPIO, LOW);
+  digitalWrite(LED_GPIO, HIGH);
   // REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) & (~LED_GPIO_HIGH));
   delayMicroseconds(PULSE_DELAY_US);
 }
 
 void pulseBinary0() {
-  digitalWrite(LED_GPIO, LOW);
+  digitalWrite(LED_GPIO, HIGH);
   // REG_WRITE(GPIO_OUT_REG, REG_READ(GPIO_OUT_REG) & (~LED_GPIO_HIGH));
   delayMicroseconds(PULSE_DELAY_US);
   digitalWrite(LED_GPIO, LOW);
@@ -134,30 +136,28 @@ void outputStartOfFrame() {
   for(int i = 0; i < BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
       pulseBinary1();
   }
+  digitalWrite(LED_GPIO,LOW);
+  delayMicroseconds(PULSE_DELAY_US);
 }
 
 void setup(){
   pinMode(LED_GPIO, OUTPUT);
-  //pinMode(8, OUTPUT);
-  digitalWrite(8,1);
   Serial.begin(115200);
 
   /* Debugging - hardcode the string to send. */
-  const char message[] = "hello";
+  const char message[] = "Bronson";
   int ret = modulateString(&message[0U], strlen(message), &modulatedBytes[0U], MODULATED_BYTES_MAX_LEN);
 
   /* Delay one second before starting transmission. */
   delay(3000);
 
   /* Output the start-of-frame sequence. */
+  ESP_INTR_DISABLE(XT_TIMER_INTNUM);
   outputStartOfFrame();
-  //digitalWrite(8,0);
-  delayMicroseconds(PULSE_DELAY_US*4);
+  
+  //delayMicroseconds(PULSE_DELAY_US*4);
   
 
-  // Serial.println("\nSent SOF");
-
-  uint8_t val = 0;
   /* Output the signal. */
   for(int i = 0; i < (strlen(message) + 1) * BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
     if(modulatedBytes[i] == 1) {
@@ -167,91 +167,13 @@ void setup(){
       /* Output a low. */
       pulseBinary0();
     }
-    val++;
   }
-  //digitalWrite(8,1);
-  //Serial.println(val);
+
   Serial.println("\nSent message.");
 
-  // xTaskCreatePinnedToCore( // create a task on core 0 to make sure that still works with core 1 interrupts disabled later
-  //     Task1code, /* Function to implement the task */
-  //     "Task1", /* Name of the task */
-  //     10000,  /* Stack size in words */
-  //     NULL,  /* Task input parameter */
-  //     0,  /* Priority of the task */
-  //     &Task1,  /* Task handle. */
-  //     0); /* Core where the task should run */
-
-  // My_timer = timerBegin(0, 80, true);
-  // timerAttachInterrupt(My_timer, &onTimer, true);
-  // timerAlarmWrite(My_timer, 1000, true);
-  // timerAlarmEnable(My_timer);
-  // ESP_INTR_DISABLE(XT_TIMER_INTNUM); // disables the tick interrupt
-
-  // // SENDING SECOND MESSAGE
-
-  // /* Delay 3 second before starting transmission. */
-  // delay(3000);
-
-  // /* Output the start-of-frame sequence. */
-  // outputStartOfFrame();
-
-  // Serial.println("\nSent second SOF");
-
-  // val = 0;
-  // /* Output the signal. */
-  // for(int i = 0; i < strlen(message) * BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
-  //   if(modulatedBytes[i] == 1) {
-  //     /* Output a high. */
-  //     pulseBinary1();
-  //   } else {
-  //     /* Output a low. */
-  //     pulseBinary0();
-  //   }
-  //   val++;
-  // }
-  // Serial.print(val);
-  // Serial.print("\nSent message.");
-
-  /* TESTING photodiode - just outputting straight DC signal*/
-  // digitalWrite(LED_GPIO, HIGH);
 }
 
 void loop(){
-  /* Outputting a square wave. */
-  // 45kHz --> delay 10 us
-  // 10kHz --> delay 50 us
-  // 1kHz --> delay 500 us
-  // digitalWrite(LED_GPIO, HIGH);
-  // delayMicroseconds(50);
-  // digitalWrite(LED_GPIO, LOW);
-  // delayMicroseconds(50);
-  
-  /* Debugging - hardcode the string to send. */
-  // const char message[] = "hello";
-  // int ret = modulateString(&message[0U], strlen(message), &modulatedBytes[0U], MODULATED_BYTES_MAX_LEN);
 
-  // /* Delay one second before starting transmission. */
-  // delay(5000);
-
-  // /* Output the start-of-frame sequence. */
-  // outputStartOfFrame();
-
-  // Serial.println("\nSent SOF");
-
-  // uint8_t val = 0;
-  // /* Output the signal. */
-  // for(int i = 0; i < strlen(message) * BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
-  //   if(modulatedBytes[i] == 1) {
-  //     /* Output a high. */
-  //     pulseBinary1();
-  //   } else {
-  //     /* Output a low. */
-  //     pulseBinary0();
-  //   }
-  //   val++;
-  // }
-  // Serial.print(val);
-  // Serial.print("\nSent message.");
 }
 

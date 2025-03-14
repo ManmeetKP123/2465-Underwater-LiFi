@@ -3,6 +3,7 @@
 #include "freertos/xtensa_timer.h"
 #include "esp_intr_alloc.h"
 
+
 #define PHOTO_PIN 14
 #define BIT_PERIOD_US 50 // period of each transmitted bit pulse
 #define BAUD_RATE 115200 // for serial communication
@@ -37,6 +38,7 @@ volatile uint32_t zerosCount = 0;
 uint8_t byteBuffer[BUFFER_SIZE]; // for decoding the incoming bits
 uint8_t bitBuffer[BIT_BUFFER_SIZE];
 uint8_t sampleBuffer[SAMPLE_SIZE];
+uint8_t cleanedBuffer[SAMPLE_SIZE];
 uint8_t bufferIndex = 0;
 uint32_t bitbufferIndex = 0;
 hw_timer_t *timer = NULL;
@@ -62,6 +64,11 @@ void IRAM_ATTR samplingISR() {
     //digitalWrite(8,0);
   }
 }
+void begin_samplingISR(){
+  detachInterrupt(PHOTO_PIN);
+  timerWrite(timer,0);
+  timerAlarmEnable(timer);
+}
 void IRAM_ATTR startOfFrameISR() {
   int currentState = (GPIO.in >> PHOTO_PIN) & 1;
 
@@ -73,20 +80,107 @@ void IRAM_ATTR startOfFrameISR() {
 
   if (risingPulseCount >=8 && fallingPulseCount >= 8) { // we've detected 16 successful transitions
     detachInterrupt(PHOTO_PIN);
-    // may need to add a half period delay?
-    //digitalWrite(8,1);
-    //delayMicroseconds(BIT_PERIOD_US/3);
-    //samplingISR();
-    timerAlarmEnable(timer);
-    
-
+    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
   }
 }
 
-
-void processing_buffer(){
-  // Implement maybe? To clear up loop?
+void remove_inital_values() {
+  bool past_SOF = false;
+  int j=0;
+  for(int i=1; i<sizeof(sampleBuffer)/sizeof(sampleBuffer[0]);i++){
+    int previous_value = sampleBuffer[i-1];
+    int current_value = sampleBuffer[i];
+    if(current_value==1 && previous_value==0){
+      past_SOF = true;
+    }
+    if (past_SOF){
+      cleanedBuffer[j++]=sampleBuffer[i];
+    }
+  }
 }
+
+void thresholding_output(){
+  const int oneHigh = 10;   // Ideal high duration for a 1 (50 µs)
+  const int zeroHigh = 5;   // Ideal high duration for a 0 (25 µs)
+  const int tolerance = 2;  // Allowable margin for jitter
+  int i=0;
+  int k=0;
+  while (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0])) {
+      if (cleanedBuffer[i] == 1) {
+          int count = 0;
+          // Count the continuous high samples
+          while (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0]) && cleanedBuffer[i] == 1) {
+              count++;
+              i++;
+          }
+  
+          if (count > oneHigh + tolerance) {
+              int remainder = count % oneHigh;
+              int numOnes = count/oneHigh;
+              int numZeros = 0;
+              if (remainder >= oneHigh - tolerance){
+                numOnes++;
+              }
+              else if(remainder >= zeroHigh - tolerance){
+                numZeros++;
+              }
+              for(int j=0; j<numOnes;j++){
+                bitBuffer[k++] = 1;
+              }
+              for(int j=0;j< numZeros;j++){
+                bitBuffer[k++] = 0;
+              }
+          } else {
+              // For shorter pulses, decide based on the duration.
+              if (count >= oneHigh - tolerance){
+                bitBuffer[k++]=1;
+              }
+              else if (count >= zeroHigh - tolerance){
+                bitBuffer[k++]=0;
+              }
+              // Otherwise, ignore as noise.
+          }
+      } else {
+          // Skip low samples until the next high pulse.
+          i++;
+      }
+  }
+
+//   for(int i=0; i< sizeof(bitBuffer)/sizeof(bitBuffer[0]);i++){
+//     Serial.println(bitBuffer[i]);
+//  }
+}
+
+void output_transmission() {
+  for(int j=0;j<BITS_PER_BYTE;j++){
+    uint8_t bitValue =  bitBuffer[j];
+    currentByte = (currentByte << 1) | bitValue;
+    zerosCount=0;
+    onesCount=0;
+  }
+  Serial.print("Length of Message: ");
+  Serial.println(currentByte);
+
+  lengthOfMessage = currentByte;
+  currentByte = 0;
+
+  for(int k=1;k<lengthOfMessage+1;k++){
+    for(int j=k*BITS_PER_BYTE;j<(k+1)*BITS_PER_BYTE;j++){
+      uint8_t bitValue =  bitBuffer[j];
+      currentByte = (currentByte << 1) | bitValue;
+      zerosCount=0;
+      onesCount=0;
+    }    
+    fullMessage[bufferIndex] = static_cast<char>(currentByte);
+    bufferIndex++;
+    currentByte = 0;
+  }
+
+  Serial.print("Full Message Recieved: ");
+  Serial.println(fullMessage);
+
+}
+
 
 /**
  * MAIN
@@ -96,12 +190,11 @@ void setup(){
   ESP_INTR_DISABLE(XT_TIMER_INTNUM); // disables the tick interrupt
   Serial.begin(BAUD_RATE);
   pinMode(PHOTO_PIN, INPUT);
-  attachInterrupt(PHOTO_PIN, startOfFrameISR, CHANGE);
+  //attachInterrupt(PHOTO_PIN, startOfFrameISR, CHANGE);
+  attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
 
   timer = timerBegin(0, TIMER_PRESCALER, true);
-  // slowest the timer interrupt can be implemented is 1220.7Hz;
   timerAttachInterrupt(timer, &samplingISR, true);
-  // count up from 0 to 9999 for 1s timer; sampling rate of 20kHz
   timerAlarmWrite(timer, TIMER_TICK_US, true);
   Serial.println("Receiving Initiated...");
 }
@@ -109,53 +202,65 @@ void setup(){
 void loop() {
   if (samplingComplete) {
     samplingComplete = false;
+    remove_inital_values();
+    thresholding_output();
+    output_transmission();
+    
+
+
+
     // finding length of message
-    for(int j=0;j<BITS_PER_BYTE;j++){
-      for (int i=j*SAMPLES_PER_PERIOD;i<(j+1)*SAMPLES_PER_PERIOD;i++){
-        Serial.println(sampleBuffer[i]);
-        if (sampleBuffer[i]){
-          onesCount++;
-        }
-        else {
-          zerosCount++;
-        }
-      }
-      uint8_t bitValue =  (onesCount > (zerosCount - (SAMPLES_PER_PERIOD / 2))) ? 1 : 0;
-      currentByte = (currentByte << 1) | bitValue;
-      zerosCount=0;
-      onesCount=0;
-    }
-    Serial.print("Length of Message: ");
-    Serial.println(currentByte);
+    // for(int j=0;j<BITS_PER_BYTE;j++){
+    //   for (int i=j*SAMPLES_PER_PERIOD;i<=(j+1)*SAMPLES_PER_PERIOD;i++){
+    //     Serial.println(cleanedBuffer[i]);
+    //     if (cleanedBuffer[i]){
+    //       onesCount++;
+    //     }
+    //     else {
+    //       zerosCount++;
+    //     }
+    //   }
+    //   uint8_t bitValue =  (zerosCount > (onesCount - (SAMPLES_PER_PERIOD / 2))) ? 0 : 1;
+    //   currentByte = (currentByte << 1) | bitValue;
+    //   zerosCount=0;
+    //   onesCount=0;
+    // }
+    // Serial.print("Length of Message: ");
+    // Serial.println(currentByte);
 
-    lengthOfMessage = currentByte;
-    currentByte = 0;
+    // lengthOfMessage = currentByte;
+    // currentByte = 0;
 
-    for(int k=1;k<lengthOfMessage+1;k++){
-      for(int j=k*BITS_PER_BYTE;j<(k+1)*BITS_PER_BYTE;j++){
-        for (int i=j*SAMPLES_PER_PERIOD;i<(j+1)*SAMPLES_PER_PERIOD;i++){
-          Serial.println(sampleBuffer[i]);
-          if (sampleBuffer[i]){
-            onesCount++;
-          }
-          else {
-            zerosCount++;
-          }
-        }
-        uint8_t bitValue =  (onesCount > (zerosCount - (SAMPLES_PER_PERIOD / 2))) ? 1 : 0;
-        currentByte = (currentByte << 1) | bitValue;
-        zerosCount=0;
-        onesCount=0;
-      }
-      //Serial.println(currentByte);
+    // for(int k=1;k<lengthOfMessage+1;k++){
+    //   for(int j=k*BITS_PER_BYTE;j<(k+1)*BITS_PER_BYTE;j++){
+    //     for (int i=j*SAMPLES_PER_PERIOD;i<=(j+1)*SAMPLES_PER_PERIOD;i++){
+    //       Serial.println(cleanedBuffer[i]);
+    //       if (cleanedBuffer[i]){
+    //         onesCount++;
+    //       }
+    //       else {
+    //         zerosCount++;
+    //       }
+    //     }
+    //     uint8_t bitValue =  (zerosCount > (onesCount - (SAMPLES_PER_PERIOD / 2))) ? 0 : 1;
+    //     currentByte = (currentByte << 1) | bitValue;
+    //     zerosCount=0;
+    //     onesCount=0;
+    //   }
+    //   //Serial.println(currentByte);
       
-      fullMessage[bufferIndex] = static_cast<char>(currentByte);
-      bufferIndex++;
-      currentByte = 0;
-    }
+    //   fullMessage[bufferIndex] = static_cast<char>(currentByte);
+    //   bufferIndex++;
+    //   currentByte = 0;
+    // }
 
-    Serial.print("Full Message Recieved: ");
-    Serial.println(fullMessage);
+    // Serial.print("Full Message Recieved: ");
+    // Serial.println(fullMessage);
+
+
+
+
+
 
     // processing bits
 
