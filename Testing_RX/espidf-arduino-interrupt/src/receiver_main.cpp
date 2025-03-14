@@ -69,20 +69,20 @@ void begin_samplingISR(){
   timerWrite(timer,0);
   timerAlarmEnable(timer);
 }
-void IRAM_ATTR startOfFrameISR() {
-  int currentState = (GPIO.in >> PHOTO_PIN) & 1;
+// void IRAM_ATTR startOfFrameISR() {
+//   int currentState = (GPIO.in >> PHOTO_PIN) & 1;
 
-  if (currentState){ // currentState HI so rising edge detection
-    risingPulseCount++;
-  } else { // currentState LO so falling edge detection
-    fallingPulseCount++;
-  }
+//   if (currentState){ // currentState HI so rising edge detection
+//     risingPulseCount++;
+//   } else { // currentState LO so falling edge detection
+//     fallingPulseCount++;
+//   }
 
-  if (risingPulseCount >=8 && fallingPulseCount >= 8) { // we've detected 16 successful transitions
-    detachInterrupt(PHOTO_PIN);
-    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
-  }
-}
+//   if (risingPulseCount >=8 && fallingPulseCount >= 8) { // we've detected 16 successful transitions
+//     detachInterrupt(PHOTO_PIN);
+//     attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
+//   }
+// }
 
 void remove_inital_values() {
   bool past_SOF = false;
@@ -90,7 +90,7 @@ void remove_inital_values() {
   for(int i=1; i<sizeof(sampleBuffer)/sizeof(sampleBuffer[0]);i++){
     int previous_value = sampleBuffer[i-1];
     int current_value = sampleBuffer[i];
-    if(current_value==1 && previous_value==0){
+    if(current_value==0 && previous_value==1){
       past_SOF = true;
     }
     if (past_SOF){
@@ -100,8 +100,8 @@ void remove_inital_values() {
 }
 
 void thresholding_output(){
-  const int oneHigh = 10;   // Ideal high duration for a 1 (50 µs)
-  const int zeroHigh = 5;   // Ideal high duration for a 0 (25 µs)
+  const int oneHigh = 5;   // Ideal high duration for a 1 (50 µs)
+  const int zeroHigh = 10;   // Ideal high duration for a 0 (25 µs)
   const int tolerance = 2;  // Allowable margin for jitter
   int i=0;
   int k=0;
@@ -109,33 +109,33 @@ void thresholding_output(){
       if (cleanedBuffer[i] == 1) {
           int count = 0;
           // Count the continuous high samples
-          while (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0]) && cleanedBuffer[i] == 1) {
+          while (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0]) && cleanedBuffer[i] == 0) {
               count++;
               i++;
           }
   
-          if (count > oneHigh + tolerance) {
-              int remainder = count % oneHigh;
-              int numOnes = count/oneHigh;
-              int numZeros = 0;
-              if (remainder >= oneHigh - tolerance){
-                numOnes++;
-              }
-              else if(remainder >= zeroHigh - tolerance){
+          if (count > zeroHigh + tolerance) {
+              int remainder = count % zeroHigh;
+              int numZeros = count/zeroHigh;
+              int numOnes = 0;
+              if (remainder >= zeroHigh - tolerance){
                 numZeros++;
               }
-              for(int j=0; j<numOnes;j++){
-                bitBuffer[k++] = 1;
+              else if(remainder >= oneHigh - tolerance){
+                numOnes++;
               }
-              for(int j=0;j< numZeros;j++){
+              for(int j=0; j<numZeros;j++){
                 bitBuffer[k++] = 0;
               }
-          } else {
-              if (count >= oneHigh - tolerance){
-                bitBuffer[k++]=1;
+              for(int j=0;j< numOnes;j++){
+                bitBuffer[k++] = 1;
               }
-              else if (count >= zeroHigh - tolerance){
+          } else {
+              if (count >= zeroHigh - tolerance){
                 bitBuffer[k++]=0;
+              }
+              else if (count >= oneHigh - tolerance){
+                bitBuffer[k++]=1;
               }
               // Otherwise, ignore as noise.
           }
@@ -200,6 +200,8 @@ void loop() {
     remove_inital_values();
     thresholding_output();
     output_transmission();
+
+    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
     
   }
 }
