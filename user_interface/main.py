@@ -4,7 +4,7 @@ def main():
     print("Welcome to the Underwater LiFi User Interface!")
 
     ser = serial.Serial(
-        port='COM4',
+        port='COM4', # UPDATE AS NEEDED
         baudrate=115200,
         parity=serial.PARITY_NONE,
         stopbits=serial.STOPBITS_ONE,
