@@ -69,20 +69,6 @@ void begin_samplingISR(){
   timerWrite(timer,0);
   timerAlarmEnable(timer);
 }
-// void IRAM_ATTR startOfFrameISR() {
-//   int currentState = (GPIO.in >> PHOTO_PIN) & 1;
-
-//   if (currentState){ // currentState HI so rising edge detection
-//     risingPulseCount++;
-//   } else { // currentState LO so falling edge detection
-//     fallingPulseCount++;
-//   }
-
-//   if (risingPulseCount >=8 && fallingPulseCount >= 8) { // we've detected 16 successful transitions
-//     detachInterrupt(PHOTO_PIN);
-//     attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
-//   }
-// }
 
 void remove_inital_values() {
   bool past_SOF = false;
@@ -185,7 +171,6 @@ void setup(){
   ESP_INTR_DISABLE(XT_TIMER_INTNUM); // disables the tick interrupt
   Serial.begin(BAUD_RATE);
   pinMode(PHOTO_PIN, INPUT);
-  //attachInterrupt(PHOTO_PIN, startOfFrameISR, CHANGE);
   attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
 
   timer = timerBegin(0, TIMER_PRESCALER, true);
