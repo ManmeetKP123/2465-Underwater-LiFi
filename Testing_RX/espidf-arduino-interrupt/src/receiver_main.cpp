@@ -13,7 +13,7 @@
 #define TIMER_PRESCALER 80
 #define THRESHOLD 500 // Adjust based on photodiode sensitivity
 #define BITS_PER_BYTE 8U
-#define BUFFER_SIZE 25 // static buffer size to prevent any dynamic allocation
+#define BUFFER_SIZE 255 // static buffer size to prevent any dynamic allocation
 #define BIT_BUFFER_SIZE BITS_PER_BYTE*BUFFER_SIZE
 #define SAMPLE_SIZE BIT_BUFFER_SIZE*SAMPLES_PER_PERIOD
 
@@ -92,18 +92,19 @@ void thresholding_output(){
   int i=0;
   int k=0;
   while (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0])) {
-      if (cleanedBuffer[i] == 1) {
+      if (cleanedBuffer[i] == 0) {
           int count = 0;
           // Count the continuous high samples
           while (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0]) && cleanedBuffer[i] == 0) {
               count++;
               i++;
           }
-  
+
           if (count > zeroHigh + tolerance) {
               int remainder = count % zeroHigh;
               int numZeros = count/zeroHigh;
               int numOnes = 0;
+              //Serial.println(remainder);
               if (remainder >= zeroHigh - tolerance){
                 numZeros++;
               }

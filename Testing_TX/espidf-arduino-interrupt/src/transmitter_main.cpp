@@ -120,12 +120,14 @@ void pulseBinary0() {
  */
 void outputStartOfFrame() {
   /* Output a high. */
-  for(int i = 0; i < BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
-      digitalWrite(LED_GPIO,HIGH);
+  digitalWrite(LED_GPIO,HIGH);
+  delayMicroseconds(PULSE_DELAY_US);
+  for(int i = 0; i < BITS_PER_BYTE-1; i++) {
+      digitalWrite(LED_GPIO,LOW);
       delayMicroseconds(PULSE_DELAY_US*2);
   }
-  // digitalWrite(LED_GPIO,LOW);
-  // delayMicroseconds(PULSE_DELAY_US);
+  digitalWrite(LED_GPIO,HIGH);
+  delayMicroseconds(PULSE_DELAY_US);
 }
 
 void setup(){
@@ -133,7 +135,7 @@ void setup(){
   Serial.begin(115200);
 
   /* Debugging - hardcode the string to send. */
-  const char message[] = "Bronson";
+  const char message[] = "I love engineering so much it is my favourite thing";
   int ret = modulateString(&message[0U], strlen(message), &modulatedBytes[0U], MODULATED_BYTES_MAX_LEN);
 
   /* Delay one second before starting transmission. */
