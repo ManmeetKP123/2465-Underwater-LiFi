@@ -101,15 +101,11 @@ void thresholding_output(){
           }
 
           if (count > zeroHigh + tolerance) {
-              int remainder = count % zeroHigh;
+              // removing remainder and just taking it as a 1
               int numZeros = count/zeroHigh;
               int numOnes = 0;
-              //Serial.println(remainder);
-              if (remainder >= zeroHigh - tolerance){
-                numZeros++;
-              }
-              else if(remainder >= oneHigh - tolerance){
-                numOnes++;
+              if (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0])){
+                numOnes = 1;
               }
               for(int j=0; j<numZeros;j++){
                 bitBuffer[k++] = 0;
@@ -127,7 +123,7 @@ void thresholding_output(){
               // Otherwise, ignore as noise.
           }
       } else {
-          // Skip low samples until the next high pulse.
+          // Skip higher samples until the next high pulse.
           i++;
       }
   }
