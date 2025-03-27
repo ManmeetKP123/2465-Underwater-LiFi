@@ -2,8 +2,7 @@
 #include "soc/rtc.h"
 #include "freertos/xtensa_timer.h"
 #include "esp_intr_alloc.h"
-#include <iostream>
-#include <fstream>
+#include <cstring>
 
 #define PHOTO_PIN 14
 #define BIT_PERIOD_US 50 // period of each transmitted bit pulse
@@ -35,7 +34,6 @@ uint8_t cleanedBuffer[SAMPLE_SIZE];
 uint8_t bufferIndex = 0;
 hw_timer_t *timer = NULL;
 uint8_t currentByte = 0;
-bool lengthDetected = false;
 uint16_t lengthOfMessage = 0;
 char fullMessage[BUFFER_SIZE];
 
@@ -140,12 +138,11 @@ void reset_variables(){
   bufferIndex = 0;
   currentByte = 0;
   lengthOfMessage = 0;
-  lengthDetected = false;
   // buffers
-  bitBuffer[BIT_BUFFER_SIZE] = {'\0'};
-  sampleBuffer[SAMPLE_SIZE] = {'\0'};
-  cleanedBuffer[SAMPLE_SIZE] = {'\0'};
-  fullMessage[BUFFER_SIZE] = {'\0'};
+  std::memset(&bitBuffer[0],0, BIT_BUFFER_SIZE);
+  std::memset(&sampleBuffer[0],0,SAMPLE_SIZE);
+  std::memset(&cleanedBuffer[0],0,SAMPLE_SIZE);
+  std::memset(&fullMessage[0],0,BUFFER_SIZE);
 }
 
 void output_transmission() {
@@ -204,11 +201,11 @@ void loop() {
     // resetting variables
 
     reset_variables();
+    timerAlarmDisable(timer);
     timerAttachInterrupt(timer, &samplingISR, true);
     timerAlarmWrite(timer, TIMER_TICK_US, true);
     Serial.println("Receiving Initiated");
-    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
-        
+    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);          
   }
 }
 
