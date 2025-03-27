@@ -15,7 +15,7 @@
 #define BITS_PER_BYTE 8U
 #define BUFFER_SIZE 255 // static buffer size to prevent any dynamic allocation
 #define BIT_BUFFER_SIZE BITS_PER_BYTE*BUFFER_SIZE
-#define SAMPLE_SIZE BIT_BUFFER_SIZE*SAMPLES_PER_PERIOD
+#define SAMPLE_SIZE BIT_BUFFER_SIZE*SAMPLES_PER_PERIOD*3 // Added multiplication by 3 to account for extra samples
 
 /**
  * VOLATILE DECLARATIONS
@@ -85,6 +85,15 @@ void remove_inital_values() {
   }
 }
 
+bool check_k(int k) {
+  if(k>=BIT_BUFFER_SIZE){
+    return false;
+  }
+  else{
+    return true;
+  }
+}
+
 void thresholding_output(){
   const int oneHigh = 5;   // Ideal high duration for a 1 (50 µs)
   const int zeroHigh = 10;   // Ideal high duration for a 0 (25 µs)
@@ -101,25 +110,37 @@ void thresholding_output(){
           }
 
           if (count > zeroHigh + tolerance) {
-              // removing remainder and just taking it as a 1
               int numZeros = count/zeroHigh;
-              int numOnes = 0;
-              if (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0])){
-                numOnes = 1;
-              }
               for(int j=0; j<numZeros;j++){
                 bitBuffer[k++] = 0;
+                if(!check_k(k)){
+                  break;
+                  break;
+                }
               }
-              for(int j=0;j< numOnes;j++){
+              // bitBuffer[k++] = 1;
+              if (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0] && cleanedBuffer[i] == 1)){
                 bitBuffer[k++] = 1;
+                if(!check_k(k)){
+                  break;
+                  break;
+                }
               }
-          } else {
-              if (count >= zeroHigh - tolerance){
-                bitBuffer[k++]=0;
-              }
-              else if (count >= oneHigh - tolerance){
-                bitBuffer[k++]=1;
-              }
+          } else if (count >= oneHigh - tolerance){
+              bitBuffer[k++]=1;
+              if(!check_k(k)){
+                  break;
+                  break;
+                }
+              // if (count >= zeroHigh - tolerance){
+              //   bitBuffer[k++]=0;
+              // }
+              // else if (count >= oneHigh - tolerance){
+              //   bitBuffer[k++]=1;
+              // }
+              // if (count >= oneHigh - tolerance){
+              //   bitBuffer[k++]=1;
+              // }
               // Otherwise, ignore as noise.
           }
       } else {
@@ -180,7 +201,9 @@ void loop() {
   if (samplingComplete) {
     samplingComplete = false;
     remove_inital_values();
+    Serial.println("Hellooo");
     thresholding_output();
+    Serial.println("hiya");
     output_transmission();
 
     attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);

@@ -80,8 +80,8 @@ int modulateString(const char *bytes, size_t bytesLen, uint8_t *modulatedBytes, 
     pos += modulatedLen;
 
     /* Make sure that the pos doesn't overflow the modulatedBytesLen. */
-    if(pos >= modulatedBytesLen) {
-      Serial.println("ERROR - modulated bytes' size greater than the max size of the buffer!");
+    if(pos >= modulatedBytesLen-8) {
+      Serial.println("ERROR - message size greater than the max size of the buffer! Will only send allowed amount");
       return -1;
     }
   }
@@ -135,7 +135,8 @@ void setup(){
   Serial.begin(115200);
 
   /* Debugging - hardcode the string to send. */
-  const char message[] = "I love engineering so much it is my favourite thing";
+  const char message[] = "I love engineering so much it is my favourite thing. I think about capstone ALL THE TIME! YAY";
+  // const char message[] = "I love engineering so much it is my favourite thing.";
   int ret = modulateString(&message[0U], strlen(message), &modulatedBytes[0U], MODULATED_BYTES_MAX_LEN);
 
   /* Delay one second before starting transmission. */
