@@ -135,7 +135,7 @@ void setup(){
   Serial.begin(115200);
 
   /* Debugging - hardcode the string to send. */
-  const char message[] = "I love engineering so much it is my favourite thing. I think about capstone ALL THE TIME! YAY";
+  const char message[] = "I love engineering so much it is my favourite thing. I think about capstone all the time! yay";
   // const char message[] = "I love engineering so much it is my favourite thing.";
   int ret = modulateString(&message[0U], strlen(message), &modulatedBytes[0U], MODULATED_BYTES_MAX_LEN);
 

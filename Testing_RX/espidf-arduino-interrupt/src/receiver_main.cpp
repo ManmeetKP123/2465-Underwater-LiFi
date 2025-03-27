@@ -132,16 +132,6 @@ void thresholding_output(){
                   break;
                   break;
                 }
-              // if (count >= zeroHigh - tolerance){
-              //   bitBuffer[k++]=0;
-              // }
-              // else if (count >= oneHigh - tolerance){
-              //   bitBuffer[k++]=1;
-              // }
-              // if (count >= oneHigh - tolerance){
-              //   bitBuffer[k++]=1;
-              // }
-              // Otherwise, ignore as noise.
           }
       } else {
           // Skip higher samples until the next high pulse.
@@ -201,9 +191,7 @@ void loop() {
   if (samplingComplete) {
     samplingComplete = false;
     remove_inital_values();
-    Serial.println("Hellooo");
     thresholding_output();
-    Serial.println("hiya");
     output_transmission();
 
     attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
