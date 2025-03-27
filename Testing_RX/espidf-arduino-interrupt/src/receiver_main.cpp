@@ -2,7 +2,8 @@
 #include "soc/rtc.h"
 #include "freertos/xtensa_timer.h"
 #include "esp_intr_alloc.h"
-
+#include <iostream>
+#include <fstream>
 
 #define PHOTO_PIN 14
 #define BIT_PERIOD_US 50 // period of each transmitted bit pulse
@@ -189,12 +190,34 @@ void setup(){
 
 void loop() {
   if (samplingComplete) {
+    // saving to json file
+    // std::ofstream outFile;
+    // outFile.open("output.csv");
+    
+
+    // if (outFile.is_open()) {
+    //     for (size_t i = 0; i < sizeof(sampleBuffer)/sizeof(sampleBuffer[0]); i++) {
+    //         outFile << sampleBuffer[i];
+    //         if (i != sizeof(sampleBuffer)/sizeof(sampleBuffer[0]) - 1) {
+    //             outFile << ","; // Add comma except after the last element
+    //         }
+    //     }
+    //     outFile << "\n"; // Newline at the end (optional)
+    //     outFile.close();
+    // } else {
+    //     std::cerr << "Error opening file for writing.\n";
+    // }
     samplingComplete = false;
     remove_inital_values();
+     for (int i = 0; i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0]); i++) {
+            Serial.println(cleanedBuffer[i]);
+        }
     thresholding_output();
     output_transmission();
 
-    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
+
+    //attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
+    
     
   }
 }
