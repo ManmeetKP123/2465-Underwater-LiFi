@@ -21,30 +21,20 @@
 /**
  * VOLATILE DECLARATIONS
 */
-volatile uint8_t risingPulseCount = 0;
-volatile uint8_t fallingPulseCount = 0;
-volatile uint8_t lastState = 0;
-volatile bool byteReady =  false;
 volatile uint32_t sampleCounter = 0; // for 20000 data points for 20kHz sampling freq
-volatile bool periodComplete = false;
-volatile unsigned long lastSampleTime = 0;
 volatile bool samplingComplete = false;
-volatile bool processing = false;
 volatile uint32_t onesCount = 0;
 volatile uint32_t zerosCount = 0;
 
 /**
  * GLOBAL VARIABLES
 */
-uint8_t byteBuffer[BUFFER_SIZE]; // for decoding the incoming bits
 uint8_t bitBuffer[BIT_BUFFER_SIZE];
 uint8_t sampleBuffer[SAMPLE_SIZE];
 uint8_t cleanedBuffer[SAMPLE_SIZE];
 uint8_t bufferIndex = 0;
-uint32_t bitbufferIndex = 0;
 hw_timer_t *timer = NULL;
 uint8_t currentByte = 0;
-uint8_t bitCount = 0;
 bool lengthDetected = false;
 uint16_t lengthOfMessage = 0;
 char fullMessage[BUFFER_SIZE];
@@ -141,6 +131,23 @@ void thresholding_output(){
   }
 }
 
+void reset_variables(){
+  // variables
+  sampleCounter = 0; 
+  samplingComplete = false;
+  onesCount = 0;
+  zerosCount = 0;
+  bufferIndex = 0;
+  currentByte = 0;
+  lengthOfMessage = 0;
+  lengthDetected = false;
+  // buffers
+  bitBuffer[BIT_BUFFER_SIZE] = {'\0'};
+  sampleBuffer[SAMPLE_SIZE] = {'\0'};
+  cleanedBuffer[SAMPLE_SIZE] = {'\0'};
+  fullMessage[BUFFER_SIZE] = {'\0'};
+}
+
 void output_transmission() {
   for(int j=0;j<BITS_PER_BYTE;j++){
     uint8_t bitValue =  bitBuffer[j];
@@ -176,7 +183,6 @@ void output_transmission() {
  * MAIN
 */
 void setup(){
-  pinMode(8,OUTPUT);
   ESP_INTR_DISABLE(XT_TIMER_INTNUM); // disables the tick interrupt
   Serial.begin(BAUD_RATE);
   pinMode(PHOTO_PIN, INPUT);
@@ -195,10 +201,14 @@ void loop() {
     thresholding_output();
     output_transmission();
 
+    // resetting variables
 
-    //attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
-    
-    
+    reset_variables();
+    timerAttachInterrupt(timer, &samplingISR, true);
+    timerAlarmWrite(timer, TIMER_TICK_US, true);
+    Serial.println("Receiving Initiated");
+    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
+        
   }
 }
 
