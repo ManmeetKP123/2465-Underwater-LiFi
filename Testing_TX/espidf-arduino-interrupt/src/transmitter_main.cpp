@@ -199,7 +199,7 @@ void fsmHandleTransmitState() {
   digitalWrite(LED_GPIO, LOW);
 
   // Move back to IDLE state.
-  // fsmState = IDLE;
+  fsmState = IDLE;
   
   return;
   
@@ -233,7 +233,7 @@ void loop(){
       break;
     case IDLE:
       fsmHandleIdleState();
-      delay(3000);
+      delay(1000);
       break;
     case TRANSMIT:
       fsmHandleTransmitState();
