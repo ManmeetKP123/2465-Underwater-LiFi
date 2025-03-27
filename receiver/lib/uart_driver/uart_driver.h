@@ -1,11 +1,6 @@
 #include "driver/uart.h"
 
 /*!
- * @brief Initializes the UART.
- */
-extern void initUart(void);
-
-/*!
  * @brief Sends bytes over UART.
  * 
  * @param[in]   txBuffer    The buffer containing the data to send.
@@ -13,7 +8,7 @@ extern void initUart(void);
  * 
  * @retval      Returns 1 if success; 0 otherwise.
  */
-extern uint8_t sendBytes(char *txBuffer, size_t numBytes);
+static uint8_t sendBytes(char *txBuffer, size_t numBytes);
 
 /*!
  * @brief Receives bytes over UART. Blocking.
@@ -24,6 +19,6 @@ extern uint8_t sendBytes(char *txBuffer, size_t numBytes);
  * 
  * @retval      Returns 1 if success; 0 otherwise.
  */
-extern uint8_t receiveBytes(char *rxBuffer, size_t rxBufLen, size_t &numBytesReceived);
+static uint8_t receiveBytes(char *rxBuffer, size_t rxBufLen, size_t &numBytesReceived);
 
 
