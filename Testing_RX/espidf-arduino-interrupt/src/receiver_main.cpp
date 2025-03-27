@@ -97,8 +97,8 @@ bool check_k(int k) {
 
 void thresholding_output(){
   const int oneHigh = 5;   // Ideal high duration for a 1 (50 µs)
-  const int zeroHigh = 10;   // Ideal high duration for a 0 (25 µs)
-  const int tolerance = 2;  // Allowable margin for jitter
+  const int zeroHigh = 11;   // Ideal high duration for a 0 (25 µs)
+  const int tolerance = 1;  // Allowable margin for jitter
   int i=0;
   int k=0;
   while (i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0])) {
@@ -190,28 +190,8 @@ void setup(){
 
 void loop() {
   if (samplingComplete) {
-    // saving to json file
-    // std::ofstream outFile;
-    // outFile.open("output.csv");
-    
-
-    // if (outFile.is_open()) {
-    //     for (size_t i = 0; i < sizeof(sampleBuffer)/sizeof(sampleBuffer[0]); i++) {
-    //         outFile << sampleBuffer[i];
-    //         if (i != sizeof(sampleBuffer)/sizeof(sampleBuffer[0]) - 1) {
-    //             outFile << ","; // Add comma except after the last element
-    //         }
-    //     }
-    //     outFile << "\n"; // Newline at the end (optional)
-    //     outFile.close();
-    // } else {
-    //     std::cerr << "Error opening file for writing.\n";
-    // }
     samplingComplete = false;
     remove_inital_values();
-     for (int i = 0; i < sizeof(cleanedBuffer)/sizeof(cleanedBuffer[0]); i++) {
-            Serial.println(cleanedBuffer[i]);
-        }
     thresholding_output();
     output_transmission();
 
