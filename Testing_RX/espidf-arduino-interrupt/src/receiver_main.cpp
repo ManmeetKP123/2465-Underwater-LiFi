@@ -50,7 +50,6 @@ void IRAM_ATTR samplingISR() {
   if (sampleCounter >= SAMPLE_SIZE) {
     timerDetachInterrupt(timer);
     samplingComplete = true;
-    //digitalWrite(8,0);
   }
 }
 void begin_samplingISR(){
@@ -186,6 +185,7 @@ void setup(){
   attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);
 
   timer = timerBegin(0, TIMER_PRESCALER, true);
+
   timerAttachInterrupt(timer, &samplingISR, true);
   timerAlarmWrite(timer, TIMER_TICK_US, true);
   Serial.println("Receiving Initiated...");
@@ -201,11 +201,11 @@ void loop() {
     // resetting variables
 
     reset_variables();
-    timerAlarmDisable(timer);
-    timerAttachInterrupt(timer, &samplingISR, true);
+    timer = timerBegin(0, TIMER_PRESCALER, true);
     timerAlarmWrite(timer, TIMER_TICK_US, true);
-    Serial.println("Receiving Initiated");
-    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);          
+    timerAttachInterrupt(timer, &samplingISR, true);    
+    Serial.println("Receiving Initiated...");    
+    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);      
   }
 }
 
