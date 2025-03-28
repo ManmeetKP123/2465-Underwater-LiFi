@@ -1,5 +1,3 @@
-// 
-
 #include <Arduino.h>
 #include <uart_driver.h>
 
@@ -11,14 +9,11 @@
 #define MESSAGE_BYTES_MAX       64
 #define SIGNAL_TO_DATA_RATIO    1
 #define BITS_PER_BYTE           8
-#define PULSE_DELAY_US          25 // 50000 /* Represents ~1/2 period for a single pulse. */
+#define PULSE_DELAY_US          500000 /* Represents ~1/2 period for a single pulse. */
 
 #define LED_GPIO                14
 #define LED_GPIO_HIGH           BIT0
 
-/*! 
- * @brief The FSM state of the transmitter.
- */
 enum FsmState {
   STARTUP,  // initial state
   IDLE,     // waiting to receive the next messagge to transmit
@@ -26,7 +21,6 @@ enum FsmState {
   FAULT     // error state
 };
 
-/* Variable to store the current FSM state. */
 FsmState fsmState;
 
 // Add 1 extra space in the buffers for the null terminator.
@@ -35,6 +29,19 @@ uint8_t modulatedBytes[MODULATED_BYTES_MAX_LEN + 1U];
 
 hw_timer_t *My_timer = NULL;
 TaskHandle_t Task1;
+
+void IRAM_ATTR onTimer(){
+  digitalWrite(32, HIGH);
+  digitalWrite(32, LOW);
+}
+
+void Task1code( void * parameter) {
+  for(;;) {
+    digitalWrite(32, HIGH);
+    digitalWrite(32, LOW);
+    vTaskDelay(1);
+  }
+}
 
 /* Functions for encoding and sending data. */
 void modulateByte(uint8_t byte, uint8_t *modulatedByte, size_t &modulatedByteLen) {
@@ -46,13 +53,13 @@ void modulateByte(uint8_t byte, uint8_t *modulatedByte, size_t &modulatedByteLen
   /* TODO: make sure the modulatedByte buffer is big enough. */
   modulatedByteLen = SIGNAL_TO_DATA_RATIO * BITS_PER_BYTE;
 
-  // Serial.print("\n\nOriginal byte (decimal): ");
-  // Serial.print(byte);
-  // Serial.print("\nOriginal byte (binary): ");
+  Serial.print("\n\nOriginal byte (decimal): ");
+  Serial.print(byte);
+  Serial.print("\nOriginal byte (binary): ");
 
   for(int bitIndex = 7; bitIndex >= 0; bitIndex--) {
     nextBit = (byte & 0x80) >> 7; // get left-most bit.
-    // Serial.print(nextBit); // debugging print
+    Serial.print(nextBit); // debugging print
 
     /* Add multiple periods of the same pulse, to modulate the signal. */
     for(size_t pulseCount = 0; pulseCount < SIGNAL_TO_DATA_RATIO; pulseCount++) {
@@ -63,10 +70,10 @@ void modulateByte(uint8_t byte, uint8_t *modulatedByte, size_t &modulatedByteLen
   }
 
   /* debugging print: print the final modulated character. */
-  // Serial.print("\nModulated byte: ");
-  // for(size_t index = 0U; index < SIGNAL_TO_DATA_RATIO * BITS_PER_BYTE; index++) {
-  //   Serial.print(modulatedByte[index]);
-  // }
+  Serial.print("\nModulated byte: ");
+  for(size_t index = 0U; index < SIGNAL_TO_DATA_RATIO * BITS_PER_BYTE; index++) {
+    Serial.print(modulatedByte[index]);
+  }
 }
 
 int modulateString(const uint8_t *bytes, size_t bytesLen, uint8_t *modulatedBytes, size_t modulatedBytesLen) {
@@ -97,27 +104,25 @@ int modulateString(const uint8_t *bytes, size_t bytesLen, uint8_t *modulatedByte
     pos += modulatedLen;
 
     /* Make sure that the pos doesn't overflow the modulatedBytesLen. */
-    if(pos >= modulatedBytesLen-8) {
-      Serial.println("ERROR - message size greater than the max size of the buffer! Will only send allowed amount");
+    if(pos >= modulatedBytesLen) {
+      Serial.println("ERROR - modulated bytes' size greater than the max size of the buffer!");
       return -1;
     }
   }
 
   /* debugging print: print the final modulated string. */
-  // Serial.print("\n\nModulated string: ");
-  // for(size_t index = 0U; index < pos; index++) {
-  //   Serial.print(modulatedBytes[index]);
-  // }
-
-  // Serial.println("\n\n");
+  Serial.print("\n\nModulated string: ");
+  for(size_t index = 0U; index < pos; index++) {
+    Serial.print(modulatedBytes[index]);
+  }
 
   return 0;
 }
 
 void pulseBinary1() {
-  digitalWrite(LED_GPIO, LOW);
-  delayMicroseconds(PULSE_DELAY_US);
   digitalWrite(LED_GPIO, HIGH);
+  delayMicroseconds(PULSE_DELAY_US);
+  digitalWrite(LED_GPIO, LOW);
   delayMicroseconds(PULSE_DELAY_US);
 }
 
@@ -128,20 +133,16 @@ void pulseBinary0() {
   delayMicroseconds(PULSE_DELAY_US);
 }
 
+
 /*!
  * @brief   Outputs the Start of Frame bit sequence
  * @details Outputs the following sequence: 11111111, modulated, to indicate the start of the message.
  */
 void outputStartOfFrame() {
   /* Output a high. */
-  digitalWrite(LED_GPIO,HIGH);
-  delayMicroseconds(PULSE_DELAY_US);
-  for(int i = 0; i < BITS_PER_BYTE-1; i++) {
-      digitalWrite(LED_GPIO,LOW);
-      delayMicroseconds(PULSE_DELAY_US*2);
+  for(int i = 0; i < BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
+      pulseBinary1();
   }
-  digitalWrite(LED_GPIO,HIGH);
-  delayMicroseconds(PULSE_DELAY_US);
 }
 
 void fsmHandleIdleState() {
@@ -162,11 +163,10 @@ void fsmHandleIdleState() {
     // Add null terminator.
     messageBytes[numBytesReceived] = '\0';
 
-    // Debug prints.
-    // Serial.println("Message:");
-    // for(uint8_t index = 0; index < numBytesReceived; index++) {
-    //   Serial.println(messageBytes[index]);
-    // }
+    Serial.println("Message:");
+    for(uint8_t index = 0; index < numBytesReceived; index++) {
+      Serial.println(messageBytes[index]);
+    }
 
     Serial.println("Message received.");
 
@@ -179,25 +179,16 @@ void fsmHandleTransmitState() {
   uint8_t messageLen = strlen((const char *)messageBytes);
   modulateString(messageBytes, messageLen, modulatedBytes, MODULATED_BYTES_MAX_LEN);
   
- /* Output the start-of-frame sequence. */
-  outputStartOfFrame();
-    
-  /* Output the signal. */
-  for(int i = 0; i < (messageLen + 1U) * BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO; i++) {
-    if(modulatedBytes[i] == 1) {
-      /* Output a high. */
+  // Plus 8 for the message length.
+  for(int index = 0; index < (8U + messageLen * BITS_PER_BYTE) * SIGNAL_TO_DATA_RATIO; index++) {
+    if(modulatedBytes[index] == 1) {
       pulseBinary1();
     } else {
-      /* Output a low. */
       pulseBinary0();
     }
   }
 
-  // Output final low to indicate the end of the message.
-  pulseBinary0();
-
   Serial.println("Message transmitted.");
-  digitalWrite(LED_GPIO, LOW);
 
   // Move back to IDLE state.
   fsmState = IDLE;
@@ -213,17 +204,18 @@ void fsmHandleTransmitState() {
   // delayMicroseconds(24);
   // digitalWrite(LED_GPIO, LOW);
   // delayMicroseconds(24);
+  return;
 }
 
-void setup(){
-  fsmState = STARTUP;
-
+void setup() {
   pinMode(LED_GPIO, OUTPUT);
   Serial.begin(115200);
 
+  /* TESTING photodiode - just outputting straight DC signal*/
+  // digitalWrite(LED_GPIO, HIGH);
+
   // Move into the IDLE state.
   fsmState = IDLE;
-
 }
 
 void loop(){
@@ -234,11 +226,11 @@ void loop(){
       break;
     case IDLE:
       fsmHandleIdleState();
-      delay(1000);
+      delay(3000);
       break;
     case TRANSMIT:
       fsmHandleTransmitState();
-      delay(500);
+      delay(3000);
       break;
     case FAULT:
       Serial.println("FAULT state reached.");
@@ -246,4 +238,3 @@ void loop(){
       break;
   }
 }
-
