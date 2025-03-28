@@ -7,7 +7,7 @@ import time
 
 # Initialize the serial connection
 ser = serial.Serial(
-    port='/dev/tty.usbserial-1410',  # Update this to your correct port
+    port= 'COM4',#'/dev/tty.usbserial-1410',  # Update this to your correct port
     baudrate=115200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
