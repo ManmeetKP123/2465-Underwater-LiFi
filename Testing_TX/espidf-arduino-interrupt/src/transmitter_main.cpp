@@ -134,9 +134,14 @@ void pulseBinary0() {
  */
 void outputStartOfFrame() {
   /* Output a high. */
-  int sofDuration = PULSE_DELAY_US * 2 * BITS_PER_BYTE * SIGNAL_TO_DATA_RATIO;
   digitalWrite(LED_GPIO,HIGH);
-  delayMicroseconds(sofDuration);
+  delayMicroseconds(PULSE_DELAY_US);
+  for(int i = 0; i < BITS_PER_BYTE-1; i++) {
+      digitalWrite(LED_GPIO,LOW);
+      delayMicroseconds(PULSE_DELAY_US*2);
+  }
+  digitalWrite(LED_GPIO,HIGH);
+  delayMicroseconds(PULSE_DELAY_US);
 }
 
 void fsmHandleIdleState() {
@@ -188,11 +193,14 @@ void fsmHandleTransmitState() {
     }
   }
 
+  // Output final low to indicate the end of the message.
+  pulseBinary0();
+
   Serial.println("Message transmitted.");
   digitalWrite(LED_GPIO, LOW);
 
   // Move back to IDLE state.
-  // fsmState = IDLE;
+  fsmState = IDLE;
   
   return;
   
@@ -226,7 +234,7 @@ void loop(){
       break;
     case IDLE:
       fsmHandleIdleState();
-      delay(3000);
+      delay(1000);
       break;
     case TRANSMIT:
       fsmHandleTransmitState();
