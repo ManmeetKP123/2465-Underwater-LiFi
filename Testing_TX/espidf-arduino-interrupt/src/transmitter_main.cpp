@@ -46,13 +46,13 @@ void modulateByte(uint8_t byte, uint8_t *modulatedByte, size_t &modulatedByteLen
   /* TODO: make sure the modulatedByte buffer is big enough. */
   modulatedByteLen = SIGNAL_TO_DATA_RATIO * BITS_PER_BYTE;
 
-  Serial.print("\n\nOriginal byte (decimal): ");
-  Serial.print(byte);
-  Serial.print("\nOriginal byte (binary): ");
+  // Serial.print("\n\nOriginal byte (decimal): ");
+  // Serial.print(byte);
+  // Serial.print("\nOriginal byte (binary): ");
 
   for(int bitIndex = 7; bitIndex >= 0; bitIndex--) {
     nextBit = (byte & 0x80) >> 7; // get left-most bit.
-    Serial.print(nextBit); // debugging print
+    // Serial.print(nextBit); // debugging print
 
     /* Add multiple periods of the same pulse, to modulate the signal. */
     for(size_t pulseCount = 0; pulseCount < SIGNAL_TO_DATA_RATIO; pulseCount++) {
@@ -63,10 +63,10 @@ void modulateByte(uint8_t byte, uint8_t *modulatedByte, size_t &modulatedByteLen
   }
 
   /* debugging print: print the final modulated character. */
-  Serial.print("\nModulated byte: ");
-  for(size_t index = 0U; index < SIGNAL_TO_DATA_RATIO * BITS_PER_BYTE; index++) {
-    Serial.print(modulatedByte[index]);
-  }
+  // Serial.print("\nModulated byte: ");
+  // for(size_t index = 0U; index < SIGNAL_TO_DATA_RATIO * BITS_PER_BYTE; index++) {
+  //   Serial.print(modulatedByte[index]);
+  // }
 }
 
 int modulateString(const uint8_t *bytes, size_t bytesLen, uint8_t *modulatedBytes, size_t modulatedBytesLen) {
@@ -104,12 +104,12 @@ int modulateString(const uint8_t *bytes, size_t bytesLen, uint8_t *modulatedByte
   }
 
   /* debugging print: print the final modulated string. */
-  Serial.print("\n\nModulated string: ");
-  for(size_t index = 0U; index < pos; index++) {
-    Serial.print(modulatedBytes[index]);
-  }
+  // Serial.print("\n\nModulated string: ");
+  // for(size_t index = 0U; index < pos; index++) {
+  //   Serial.print(modulatedBytes[index]);
+  // }
 
-  Serial.println("\n\n");
+  // Serial.println("\n\n");
 
   return 0;
 }
@@ -157,10 +157,11 @@ void fsmHandleIdleState() {
     // Add null terminator.
     messageBytes[numBytesReceived] = '\0';
 
-    Serial.println("Message:");
-    for(uint8_t index = 0; index < numBytesReceived; index++) {
-      Serial.println(messageBytes[index]);
-    }
+    // Debug prints.
+    // Serial.println("Message:");
+    // for(uint8_t index = 0; index < numBytesReceived; index++) {
+    //   Serial.println(messageBytes[index]);
+    // }
 
     Serial.println("Message received.");
 
