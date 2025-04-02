@@ -151,6 +151,9 @@ void output_transmission() {
     zerosCount=0;
     onesCount=0;
   }
+  if(currentByte == 0){
+    return;
+  }
   Serial.print("Length of Message: ");
   Serial.println(currentByte);
 
@@ -172,6 +175,14 @@ void output_transmission() {
   Serial.print("Full Message Recieved: ");
   Serial.println(fullMessage);
 
+}
+
+void reset_timer(){
+  timer = timerBegin(0, TIMER_PRESCALER, true);
+  timerAlarmWrite(timer, TIMER_TICK_US, true);
+  timerAttachInterrupt(timer, &samplingISR, true);    
+  Serial.println("Receiving Initiated...");    
+  attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);   
 }
 
 
@@ -201,11 +212,7 @@ void loop() {
     // resetting variables
 
     reset_variables();
-    timer = timerBegin(0, TIMER_PRESCALER, true);
-    timerAlarmWrite(timer, TIMER_TICK_US, true);
-    timerAttachInterrupt(timer, &samplingISR, true);    
-    Serial.println("Receiving Initiated...");    
-    attachInterrupt(PHOTO_PIN, begin_samplingISR, RISING);      
+    reset_timer();    
   }
 }
 
