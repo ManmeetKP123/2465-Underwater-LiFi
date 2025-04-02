@@ -210,7 +210,6 @@ void loop() {
     output_transmission();
 
     // resetting variables
-
     reset_variables();
     reset_timer();    
   }
