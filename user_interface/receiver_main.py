@@ -14,9 +14,8 @@ def read_serial():
         if ser.in_waiting:
             data = ser.readline().decode('utf-8', errors='ignore').strip()
             if data:
-                # Filter the data to only show relevant messages
-                if("Full Message Received:" in data or
-                    "Receiving" in data or
+                 if("Full Message Received:" in data or
+                    "Receiving Initiated..." in data or
                     "Length of Message:" in data):
                     data_queue.append(data)
 
