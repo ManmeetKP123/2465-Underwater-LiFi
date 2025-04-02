@@ -166,7 +166,7 @@ void output_transmission() {
     bufferIndex++;
     currentByte = 0;
   }
-  if(currentByte == 0 || strlen(fullMessage) == 0){
+  if(currentByte == 0 || strlen(fullMessage) == 0 || strlen(fullMessage) != lengthOfMessage){
     return;
   }
   Serial.print("Length of Message: ");
