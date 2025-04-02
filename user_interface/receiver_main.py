@@ -2,7 +2,7 @@ import tkinter as tk
 import serial
 import threading
 
-SERIAL_PORT = '/dev/tty.usbserial-1410'  # Set to your ESP32 serial port
+SERIAL_PORT = 'COM11' # '/dev/tty.usbserial-1410'  # Set to your ESP32 serial port
 BAUDRATE = 115200
 
 class SerialReceiverGUI:
@@ -45,7 +45,11 @@ class SerialReceiverGUI:
         if self.data_queue:
             # Insert all available data into the text widget
             for data in self.data_queue:
-                self.text.insert(tk.END, data + "\n")
+                # Filter the data to only show relevant messages
+                if("Full Message Recieved:" in data or
+                    "Receiving Initiated..." in data or
+                    "Length of Message:" in data):
+                    self.text.insert(tk.END, data + "\n")
             self.text.see(tk.END)  # Scroll to the end of the text widget
             self.data_queue.clear()  # Clear the queue after displaying the data
 
