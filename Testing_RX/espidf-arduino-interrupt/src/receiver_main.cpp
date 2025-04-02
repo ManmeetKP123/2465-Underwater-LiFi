@@ -151,20 +151,6 @@ void output_transmission() {
     zerosCount=0;
     onesCount=0;
   }
-  // checking if rest of message is just 0s
-  bool remainingBitsAreZero = true;
-  for (int k = BITS_PER_BYTE; k < sizeof(bitBuffer)/sizeof(bitBuffer[0]); k++) {
-    if (bitBuffer[k] != 0) {
-      remainingBitsAreZero = false;
-      break;
-    }
-  }
-
-  if (currentByte == 0 || remainingBitsAreZero) {
-    return;
-  }
-  Serial.print("Length of Message: ");
-  Serial.println(currentByte);
 
   lengthOfMessage = currentByte;
   currentByte = 0;
@@ -180,8 +166,12 @@ void output_transmission() {
     bufferIndex++;
     currentByte = 0;
   }
-
-  Serial.print("Full Message Recieved: ");
+  if(currentByte == 0 || strlen(fullMessage) == 0){
+    return;
+  }
+  Serial.print("Length of Message: ");
+  Serial.println(lengthOfMessage);
+  Serial.print("Full Message Received: ");
   Serial.println(fullMessage);
 
 }
