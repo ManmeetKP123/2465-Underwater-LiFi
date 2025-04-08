@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 import os
 
 ser = serial.Serial(
-    port= '/dev/tty.usbserial-1410',
+    port= 'COM4',
     baudrate=115200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,

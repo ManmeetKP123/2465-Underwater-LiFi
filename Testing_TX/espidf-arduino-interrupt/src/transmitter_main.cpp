@@ -227,27 +227,23 @@ void setup(){
 }
 
 void loop(){
-  // switch(fsmState) {
-  //   case STARTUP:
-  //     Serial.println("Should not be in the STARTUP state. Move to FAULT");
-  //     fsmState = FAULT;
-  //     break;
-  //   case IDLE:
-  //     fsmHandleIdleState();
-  //     delay(1000);
-  //     break;
-  //   case TRANSMIT:
-  //     fsmHandleTransmitState();
-  //     delay(500);
-  //     break;
-  //   case FAULT:
-  //     Serial.println("FAULT state reached.");
-  //     delay(5000);
-  //     break;
-  // }
-  digitalWrite(LED_GPIO, HIGH);
-  delay(1000);
-  digitalWrite(LED_GPIO, LOW);
-  delay(1000);
+  switch(fsmState) {
+    case STARTUP:
+      Serial.println("Should not be in the STARTUP state. Move to FAULT");
+      fsmState = FAULT;
+      break;
+    case IDLE:
+      fsmHandleIdleState();
+      delay(1000);
+      break;
+    case TRANSMIT:
+      fsmHandleTransmitState();
+      delay(500);
+      break;
+    case FAULT:
+      Serial.println("FAULT state reached.");
+      delay(5000);
+      break;
+  }
 }
 

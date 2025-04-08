@@ -155,6 +155,11 @@ void output_transmission() {
   lengthOfMessage = currentByte;
   currentByte = 0;
 
+  // If the length of the message is 0, skip post-processing.
+  if(lengthOfMessage == 0) {
+    return;
+  }
+
   for(int k=1;k<lengthOfMessage+1;k++){
     for(int j=k*BITS_PER_BYTE;j<(k+1)*BITS_PER_BYTE;j++){
       uint8_t bitValue =  bitBuffer[j];
@@ -166,9 +171,11 @@ void output_transmission() {
     bufferIndex++;
     currentByte = 0;
   }
-  if(lengthOfMessage == 0 || strlen(fullMessage) == 0 || strlen(fullMessage) != lengthOfMessage){
+  // If the recovered message is not the expected length, do not print the result.
+  if(strlen(fullMessage) == 0 || strlen(fullMessage) != lengthOfMessage){
     return;
   }
+  
   Serial.print("Length of Message: ");
   Serial.println(lengthOfMessage);
   Serial.print("Full Message Received: ");

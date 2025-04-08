@@ -3,7 +3,7 @@ import serial
 import threading
 from tkinter import scrolledtext
 
-SERIAL_PORT = '/dev/tty.usbserial-1410'
+SERIAL_PORT = 'COM5' # '/dev/tty.usbserial-1410'  # Set to your ESP32 serial port
 BAUDRATE = 115200
 
 def read_serial():
@@ -13,7 +13,11 @@ def read_serial():
         if ser.in_waiting:
             data = ser.readline().decode('utf-8', errors='ignore').strip()
             if data:
-                data_queue.append(data)
+                # Filter the data to only show relevant messages
+                if("Full Message Received:" in data or
+                    "Receiving" in data or
+                    "Length of Message:" in data):
+                    data_queue.append(data)
 
 def update_gui():
     """Updates GUI with new data from serial."""
