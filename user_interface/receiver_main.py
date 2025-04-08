@@ -15,7 +15,6 @@ def read_serial():
             data = ser.readline().decode('utf-8', errors='ignore').strip()
             if data:
                  if("Full Message Received:" in data or
-                    "Receiving Initiated..." in data or
                     "Length of Message:" in data):
                     data_queue.append(data)
 
